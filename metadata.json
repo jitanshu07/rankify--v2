@@ -1,0 +1,6 @@
+{
+  "name": "Rankify",
+  "description": "A comprehensive, modern JEE exam prep companion with PCM syllabus tracker, Gemini-powered AI study mentor and doubt solver, formula hub, study timer, to-do streak system, mistake error book, backlog manager, and analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

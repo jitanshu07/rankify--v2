@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="54"
+        android:pivotY="54">
+        <!-- Atom Orbit 1: Diagonal left -->
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#38BDF8"
+            android:strokeWidth="2.8"
+            android:pathData="M30,38 C20,48 20,60 30,70 C40,80 68,80 78,70 C88,60 88,48 78,38 C68,28 40,28 30,38 Z" />
+        <!-- Atom Orbit 2: Diagonal right -->
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#818CF8"
+            android:strokeWidth="2.8"
+            android:pathData="M78,38 C88,48 88,60 78,70 C68,80 40,80 30,70 C20,60 20,48 30,38 C40,28 68,28 78,38 Z" />
+        <!-- Atom Orbit 3: Horizontal ellipse -->
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#38BDF8"
+            android:strokeWidth="2.4"
+            android:pathData="M24,54 C24,42 84,42 84,54 C84,66 24,66 24,54 Z" />
+        <!-- Central nucleus glowing core -->
+        <path
+            android:fillColor="#F59E0B"
+            android:pathData="M54,54m-8,0a8,8 0 1,0 16,0a8,8 0 1,0 -16,0" />
+        <path
+            android:fillColor="#FEF3C7"
+            android:pathData="M54,54m-4,0a4,4 0 1,0 8,0a4,4 0 1,0 -8,0" />
+        <!-- Electron dots on orbits -->
+        <path
+            android:fillColor="#38BDF8"
+            android:pathData="M31,39m-3,0a3,3 0 1,0 6,0a3,3 0 1,0 -6,0" />
+        <path
+            android:fillColor="#F43F5E"
+            android:pathData="M77,69m-3,0a3,3 0 1,0 6,0a3,3 0 1,0 -6,0" />
+        <path
+            android:fillColor="#10B981"
+            android:pathData="M54,42m-2.5,0a2.5,2.5 0 1,0 5,0a2.5,2.5 0 1,0 -5,0" />
+        <!-- Open book achievement base in safe zone -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M38,72 L54,76 L70,72 L70,76 L54,80 L38,76 Z" />
+    </group>
+</vector>
