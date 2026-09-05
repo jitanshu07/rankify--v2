@@ -14,6 +14,7 @@ import { TodoScreen } from './screens/TodoScreen';
 import { TimerScreen } from './screens/TimerScreen';
 import { ToolsScreen } from './screens/ToolsScreen';
 import { AnalyticsScreen } from './screens/AnalyticsScreen';
+import { LoginScreen } from './screens/LoginScreen';
 
 export const App: React.FC = () => {
   const { 
@@ -44,6 +45,7 @@ export const App: React.FC = () => {
         {currentTab === 'timer' && <TimerScreen />}
         {currentTab === 'tools' && <ToolsScreen />}
         {currentTab === 'analytics' && <AnalyticsScreen />}
+        {currentTab === 'login' && <LoginScreen />}
       </main>
 
       {/* Daily Check-In Modal */}

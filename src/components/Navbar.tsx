@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Flame, Clock, Moon, Sun, Download, Upload, RotateCcw, Quote, Sparkles, User, Target, CheckCircle2, Zap } from 'lucide-react';
+import { Flame, Clock, Moon, Sun, Download, Upload, RotateCcw, Quote, Sparkles, User, Target, CheckCircle2, Zap, LogOut, ShieldCheck } from 'lucide-react';
 import { HARD_QUOTES } from '../data/initialData';
 
 interface NavbarProps {
@@ -17,11 +17,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenStreak }) => {
     resetAllData, 
     openProfileModal,
     todaysCheckIn,
-    openCheckInModal
+    openCheckInModal,
+    currentUser,
+    logout,
+    setCurrentTab
   } = useApp();
   const [quoteIndex, setQuoteIndex] = useState(0);
   const [timeString, setTimeString] = useState('');
   const [showBackupMenu, setShowBackupMenu] = useState(false);
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
 
   // Digital Live Clock
   useEffect(() => {
@@ -167,6 +171,86 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenStreak }) => {
             <Zap className="w-4 h-4 text-yellow-400 fill-yellow-400" />
             <span className="text-xs font-black font-mono tracking-tight">{profile.exp || 0} <span className="text-[10px] text-yellow-400/80 font-bold">EXP</span></span>
           </div>
+
+          {/* Google Auth Status / User Pill */}
+          {currentUser ? (
+            <div className="relative">
+              <button
+                onClick={() => setShowAccountMenu(!showAccountMenu)}
+                className="flex items-center gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-900/90 border border-cyan-500/30 hover:border-cyan-400 text-slate-200 transition cursor-pointer shadow-sm"
+                title={`Google Account: ${currentUser.email} (${currentUser.id})`}
+              >
+                <div className="relative w-5 h-5 rounded-full overflow-hidden bg-slate-800 flex items-center justify-center flex-shrink-0">
+                  {currentUser.avatarUrl ? (
+                    <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[10px] font-bold text-cyan-300">{currentUser.name.charAt(0)}</span>
+                  )}
+                </div>
+                <span className="text-xs font-semibold max-w-[65px] sm:max-w-[85px] truncate hidden xs:inline">
+                  {currentUser.name.split(' ')[0]}
+                </span>
+                <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                  <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.36 24 12 24z"/>
+                  <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                  <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                </svg>
+              </button>
+
+              {showAccountMenu && (
+                <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-[#121A27] border border-cyan-500/30 shadow-2xl p-3 z-50 text-xs space-y-2 animate-in fade-in zoom-in-95">
+                  <div className="pb-2 border-b border-slate-800">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                      <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Connected to Google</span>
+                    </div>
+                    <p className="font-bold text-slate-100 truncate">{currentUser.name}</p>
+                    <p className="text-[11px] text-slate-400 truncate">{currentUser.email}</p>
+                    <p className="text-[9px] font-mono text-cyan-400 mt-1 truncate">
+                      ID: {currentUser.id}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setShowAccountMenu(false);
+                      setCurrentTab('login');
+                    }}
+                    className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-slate-200 hover:bg-slate-800 transition text-left cursor-pointer"
+                  >
+                    <span>Account & Isolation Center</span>
+                    <span className="text-[10px] text-cyan-400 font-bold">Manage →</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowAccountMenu(false);
+                      logout();
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-rose-400 hover:bg-rose-500/10 transition text-left cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sign Out of Google</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => setCurrentTab('login')}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:opacity-90 text-white text-xs font-bold transition shadow-md shadow-cyan-500/20 cursor-pointer"
+              title="Sign in with Google to isolate your To-Dos, EXP and Streak"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                <path fill="#ffffff" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                <path fill="#ffffff" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.36 24 12 24z"/>
+                <path fill="#ffffff" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                <path fill="#ffffff" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+              </svg>
+              <span>Sign In</span>
+            </button>
+          )}
 
           {/* Backup & Restore Menu */}
           <div className="relative">

@@ -11,7 +11,8 @@ import {
   NavTab, 
   PriorityType, 
   RoutineTemplate,
-  DailyCheckIn
+  DailyCheckIn,
+  AuthUser
 } from '../types';
 import { 
   INITIAL_CHAPTERS, 
@@ -27,6 +28,14 @@ interface AppContextType {
   isDarkMode: boolean;
   toggleDarkMode: () => void;
   
+  // Google Authentication & Data Separation
+  currentUser: AuthUser | null;
+  loginWithGoogle: (user: AuthUser, options?: { importGuestData?: boolean }) => void;
+  logout: () => void;
+  switchAccount: (userId: string) => void;
+  removeAccountData: (userId: string) => void;
+  knownUsers: AuthUser[];
+
   // Profile
   profile: UserProfile;
   updateProfile: (profile: Partial<UserProfile>) => void;
@@ -96,139 +105,240 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const STORAGE_KEYS = {
-  CHAPTERS: 'rankify_chapters_v2',
-  TRACKING: 'rankify_tracking_v2',
-  TODOS: 'rankify_todos_v2',
-  FORMULAS: 'rankify_formulas_v2',
-  SESSIONS: 'rankify_sessions_v2',
-  BACKLOGS: 'rankify_backlogs_v2',
-  ERRORS: 'rankify_errors_v2',
-  PROFILE: 'rankify_profile_v2',
+const AUTH_KEYS = {
+  SESSION: 'rankify_auth_session',
+  ACTIVE_USER_ID: 'rankify_active_user_id',
+  KNOWN_USERS: 'rankify_known_users',
   THEME: 'rankify_theme_v2',
-  CHECK_INS: 'rankify_checkins_v2',
+  CHAPTERS: 'rankify_chapters_v2',
+  FORMULAS: 'rankify_formulas_v2',
+};
+
+const DEFAULT_JITANSHU_USER: AuthUser = {
+  id: 'google_sub_109283749102837465',
+  name: 'Jitanshu Kumar',
+  email: 'jitanshukumar601@gmail.com',
+  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+  provider: 'google',
+  createdAt: '2026-09-01T00:00:00.000Z',
+  lastLoginAt: new Date().toISOString(),
+};
+
+const getScopedKey = (userId: string | null | undefined, feature: string) => {
+  if (userId) {
+    return `rankify_u_${userId}_${feature}`;
+  }
+  return `rankify_guest_${feature}`;
+};
+
+const createDefaultProfile = (name: string): UserProfile => ({
+  name: name || 'Jitanshu',
+  targetExam: 'JEE Advanced 2027 (AIR < 500)',
+  targetYear: 2027,
+  examGoal: 'JEE Advanced',
+  targetRank: 'AIR < 500',
+  dreamCollege: 'IIT Bombay',
+  dailyHourGoal: 8,
+  currentStreak: 0,
+  bestStreak: 0,
+  streakGoalTarget: 3,
+  lastActiveDate: new Date().toISOString().split('T')[0],
+  isOnboarded: false,
+  exp: 0,
+  lastCheckedDate: new Date().toISOString().split('T')[0],
+  lastPenaltyReason: '',
+});
+
+const loadUserScopedData = (userId: string | null, userName?: string) => {
+  // Profile
+  const profileKey = getScopedKey(userId, 'profile');
+  const savedProfile = localStorage.getItem(profileKey);
+  let loadedProfile: UserProfile;
+  if (savedProfile) {
+    try {
+      loadedProfile = JSON.parse(savedProfile);
+    } catch {
+      loadedProfile = createDefaultProfile(userName || 'Aspirant');
+    }
+  } else {
+    const legacy = localStorage.getItem('rankify_profile_v2');
+    if (legacy && (userId === DEFAULT_JITANSHU_USER.id || userName?.toLowerCase().includes('jitanshu'))) {
+      try {
+        loadedProfile = JSON.parse(legacy);
+      } catch {
+        loadedProfile = createDefaultProfile(userName || 'Jitanshu');
+      }
+    } else {
+      loadedProfile = createDefaultProfile(userName || (userId ? 'Google Aspirant' : 'Aspirant'));
+    }
+    localStorage.setItem(profileKey, JSON.stringify(loadedProfile));
+  }
+
+  // Todos
+  const todosKey = getScopedKey(userId, 'todos');
+  const savedTodos = localStorage.getItem(todosKey);
+  let loadedTodos: TodoItem[];
+  if (savedTodos) {
+    try {
+      loadedTodos = JSON.parse(savedTodos);
+    } catch {
+      loadedTodos = [];
+    }
+  } else {
+    const legacyTodos = localStorage.getItem('rankify_todos_v2');
+    if (legacyTodos && (userId === DEFAULT_JITANSHU_USER.id || userName?.toLowerCase().includes('jitanshu'))) {
+      try {
+        loadedTodos = JSON.parse(legacyTodos);
+      } catch {
+        loadedTodos = [];
+      }
+    } else {
+      loadedTodos = [];
+    }
+    localStorage.setItem(todosKey, JSON.stringify(loadedTodos));
+  }
+
+  // Check-ins
+  const checkinsKey = getScopedKey(userId, 'checkins');
+  const savedCheckins = localStorage.getItem(checkinsKey);
+  let loadedCheckins: DailyCheckIn[];
+  if (savedCheckins) {
+    try {
+      loadedCheckins = JSON.parse(savedCheckins);
+    } catch {
+      loadedCheckins = [];
+    }
+  } else {
+    const legacyCheckins = localStorage.getItem('rankify_checkins_v2');
+    if (legacyCheckins && (userId === DEFAULT_JITANSHU_USER.id || userName?.toLowerCase().includes('jitanshu'))) {
+      try {
+        loadedCheckins = JSON.parse(legacyCheckins);
+      } catch {
+        loadedCheckins = [];
+      }
+    } else {
+      loadedCheckins = [];
+    }
+    localStorage.setItem(checkinsKey, JSON.stringify(loadedCheckins));
+  }
+
+  // Sessions
+  const sessionsKey = getScopedKey(userId, 'sessions');
+  const savedSessions = localStorage.getItem(sessionsKey);
+  let loadedSessions: StudySession[] = [];
+  if (savedSessions) {
+    try {
+      loadedSessions = JSON.parse(savedSessions);
+    } catch {
+      loadedSessions = [];
+    }
+  }
+
+  // Tracking
+  const trackingKey = getScopedKey(userId, 'tracking');
+  const savedTracking = localStorage.getItem(trackingKey);
+  let loadedTracking: Record<number, ChapterTrackingState> = {};
+  if (savedTracking) {
+    try {
+      loadedTracking = JSON.parse(savedTracking);
+    } catch {
+      loadedTracking = {};
+    }
+  }
+
+  // Backlogs
+  const backlogsKey = getScopedKey(userId, 'backlogs');
+  const savedBacklogs = localStorage.getItem(backlogsKey);
+  let loadedBacklogs: BacklogItem[] = [];
+  if (savedBacklogs) {
+    try {
+      loadedBacklogs = JSON.parse(savedBacklogs);
+    } catch {
+      loadedBacklogs = [];
+    }
+  }
+
+  // Errors
+  const errorsKey = getScopedKey(userId, 'errors');
+  const savedErrors = localStorage.getItem(errorsKey);
+  let loadedErrors: ErrorLog[] = [];
+  if (savedErrors) {
+    try {
+      loadedErrors = JSON.parse(savedErrors);
+    } catch {
+      loadedErrors = [];
+    }
+  }
+
+  return {
+    profile: loadedProfile,
+    todos: loadedTodos,
+    checkIns: loadedCheckins,
+    sessions: loadedSessions,
+    tracking: loadedTracking,
+    backlogs: loadedBacklogs,
+    errors: loadedErrors,
+  };
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentTab, setCurrentTab] = useState<NavTab>('home');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.THEME);
+    const saved = localStorage.getItem(AUTH_KEYS.THEME);
     return saved !== null ? saved === 'true' : true;
   });
 
-  const [profile, setProfile] = useState<UserProfile>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.PROFILE);
+  // Known Google accounts on this device
+  const [knownUsers, setKnownUsers] = useState<AuthUser[]>(() => {
+    const saved = localStorage.getItem(AUTH_KEYS.KNOWN_USERS);
     if (saved) {
-      try { 
-        const parsed = JSON.parse(saved);
-        return {
-          name: parsed.name || 'Jitanshu',
-          targetExam: parsed.targetExam || 'JEE Advanced 2027 (AIR < 500)',
-          targetYear: Number(parsed.targetYear) || 2027,
-          examGoal: parsed.examGoal || 'JEE Advanced',
-          targetRank: parsed.targetRank || 'AIR < 500',
-          dreamCollege: parsed.dreamCollege || 'IIT Bombay',
-          dailyHourGoal: Number(parsed.dailyHourGoal) || 8,
-          currentStreak: Number(parsed.currentStreak) || 0,
-          bestStreak: Number(parsed.bestStreak) || 0,
-          streakGoalTarget: Number(parsed.streakGoalTarget) || 3,
-          lastActiveDate: parsed.lastActiveDate || new Date().toISOString().split('T')[0],
-          isOnboarded: Boolean(parsed.isOnboarded),
-          exp: Number(parsed.exp) || 0,
-          lastCheckedDate: parsed.lastCheckedDate || new Date().toISOString().split('T')[0],
-          lastPenaltyReason: parsed.lastPenaltyReason || ''
-        };
-      } catch (e) { /* ignore */ }
+      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
     }
-    return {
-      name: 'Jitanshu',
-      targetExam: 'JEE Advanced 2027 (AIR < 500)',
-      targetYear: 2027,
-      examGoal: 'JEE Advanced',
-      targetRank: 'AIR < 500',
-      dreamCollege: 'IIT Bombay',
-      dailyHourGoal: 8,
-      currentStreak: 0,
-      bestStreak: 0,
-      streakGoalTarget: 3,
-      lastActiveDate: new Date().toISOString().split('T')[0],
-      isOnboarded: false,
-      exp: 0,
-      lastCheckedDate: new Date().toISOString().split('T')[0],
-      lastPenaltyReason: ''
-    };
+    return [DEFAULT_JITANSHU_USER];
   });
 
+  // Current logged in user (defaults to Jitanshu Kumar)
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    const saved = localStorage.getItem(AUTH_KEYS.SESSION);
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+    }
+    return DEFAULT_JITANSHU_USER;
+  });
+
+  // Initial scoped load for active user
+  const initialData = loadUserScopedData(currentUser?.id || null, currentUser?.name);
+
+  const [profile, setProfile] = useState<UserProfile>(initialData.profile);
+  const [todos, setTodos] = useState<TodoItem[]>(initialData.todos);
+  const [checkIns, setCheckIns] = useState<DailyCheckIn[]>(initialData.checkIns);
+  const [sessions, setSessions] = useState<StudySession[]>(initialData.sessions);
+  const [trackingStateMap, setTrackingStateMap] = useState<Record<number, ChapterTrackingState>>(initialData.tracking);
+  const [backlogs, setBacklogs] = useState<BacklogItem[]>(initialData.backlogs);
+  const [errors, setErrors] = useState<ErrorLog[]>(initialData.errors);
+
   const [chapters, setChapters] = useState<Chapter[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.CHAPTERS);
+    const saved = localStorage.getItem(AUTH_KEYS.CHAPTERS);
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { /* ignore */ }
     }
     return INITIAL_CHAPTERS;
   });
 
-  const [trackingStateMap, setTrackingStateMap] = useState<Record<number, ChapterTrackingState>>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.TRACKING);
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
-    }
-    return {};
-  });
-
-  const [todos, setTodos] = useState<TodoItem[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.TODOS);
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
-    }
-    return INITIAL_TODOS;
-  });
-
   const [formulas, setFormulas] = useState<Formula[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.FORMULAS);
+    const saved = localStorage.getItem(AUTH_KEYS.FORMULAS);
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { /* ignore */ }
     }
     return INITIAL_FORMULAS;
   });
 
-  const [sessions, setSessions] = useState<StudySession[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.SESSIONS);
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
-    }
-    return [];
-  });
-
-  const [backlogs, setBacklogs] = useState<BacklogItem[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.BACKLOGS);
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
-    }
-    return INITIAL_BACKLOGS;
-  });
-
-  const [errors, setErrors] = useState<ErrorLog[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.ERRORS);
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
-    }
-    return INITIAL_ERRORS;
-  });
-
-  const [checkIns, setCheckIns] = useState<DailyCheckIn[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.CHECK_INS);
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
-    }
-    return [];
-  });
-
   const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
 
-  // Persist whenever state changes
+  // Persist Theme
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.THEME, String(isDarkMode));
+    localStorage.setItem(AUTH_KEYS.THEME, String(isDarkMode));
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
@@ -236,41 +346,146 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [isDarkMode]);
 
+  // Persist Active User Session
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(profile));
-  }, [profile]);
+    if (currentUser) {
+      localStorage.setItem(AUTH_KEYS.SESSION, JSON.stringify(currentUser));
+      localStorage.setItem(AUTH_KEYS.ACTIVE_USER_ID, currentUser.id);
+    } else {
+      localStorage.removeItem(AUTH_KEYS.SESSION);
+      localStorage.removeItem(AUTH_KEYS.ACTIVE_USER_ID);
+    }
+  }, [currentUser]);
+
+  // Persist Known Users
+  useEffect(() => {
+    localStorage.setItem(AUTH_KEYS.KNOWN_USERS, JSON.stringify(knownUsers));
+  }, [knownUsers]);
+
+  // Persist Per-User Scoped Data
+  useEffect(() => {
+    const key = getScopedKey(currentUser?.id, 'profile');
+    localStorage.setItem(key, JSON.stringify(profile));
+  }, [profile, currentUser]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.CHAPTERS, JSON.stringify(chapters));
+    const key = getScopedKey(currentUser?.id, 'todos');
+    localStorage.setItem(key, JSON.stringify(todos));
+  }, [todos, currentUser]);
+
+  useEffect(() => {
+    const key = getScopedKey(currentUser?.id, 'checkins');
+    localStorage.setItem(key, JSON.stringify(checkIns));
+  }, [checkIns, currentUser]);
+
+  useEffect(() => {
+    const key = getScopedKey(currentUser?.id, 'sessions');
+    localStorage.setItem(key, JSON.stringify(sessions));
+  }, [sessions, currentUser]);
+
+  useEffect(() => {
+    const key = getScopedKey(currentUser?.id, 'tracking');
+    localStorage.setItem(key, JSON.stringify(trackingStateMap));
+  }, [trackingStateMap, currentUser]);
+
+  useEffect(() => {
+    const key = getScopedKey(currentUser?.id, 'backlogs');
+    localStorage.setItem(key, JSON.stringify(backlogs));
+  }, [backlogs, currentUser]);
+
+  useEffect(() => {
+    const key = getScopedKey(currentUser?.id, 'errors');
+    localStorage.setItem(key, JSON.stringify(errors));
+  }, [errors, currentUser]);
+
+  useEffect(() => {
+    localStorage.setItem(AUTH_KEYS.CHAPTERS, JSON.stringify(chapters));
   }, [chapters]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.TRACKING, JSON.stringify(trackingStateMap));
-  }, [trackingStateMap]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.TODOS, JSON.stringify(todos));
-  }, [todos]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.FORMULAS, JSON.stringify(formulas));
+    localStorage.setItem(AUTH_KEYS.FORMULAS, JSON.stringify(formulas));
   }, [formulas]);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(sessions));
-  }, [sessions]);
+  // Google Authentication Functions
+  const loginWithGoogle = (user: AuthUser, options?: { importGuestData?: boolean }) => {
+    // Save current active state before switching
+    if (currentUser) {
+      localStorage.setItem(getScopedKey(currentUser.id, 'profile'), JSON.stringify(profile));
+      localStorage.setItem(getScopedKey(currentUser.id, 'todos'), JSON.stringify(todos));
+      localStorage.setItem(getScopedKey(currentUser.id, 'checkins'), JSON.stringify(checkIns));
+      localStorage.setItem(getScopedKey(currentUser.id, 'sessions'), JSON.stringify(sessions));
+      localStorage.setItem(getScopedKey(currentUser.id, 'tracking'), JSON.stringify(trackingStateMap));
+      localStorage.setItem(getScopedKey(currentUser.id, 'backlogs'), JSON.stringify(backlogs));
+      localStorage.setItem(getScopedKey(currentUser.id, 'errors'), JSON.stringify(errors));
+    } else if (options?.importGuestData) {
+      localStorage.setItem(getScopedKey(user.id, 'profile'), JSON.stringify(profile));
+      localStorage.setItem(getScopedKey(user.id, 'todos'), JSON.stringify(todos));
+      localStorage.setItem(getScopedKey(user.id, 'checkins'), JSON.stringify(checkIns));
+      localStorage.setItem(getScopedKey(user.id, 'sessions'), JSON.stringify(sessions));
+      localStorage.setItem(getScopedKey(user.id, 'tracking'), JSON.stringify(trackingStateMap));
+    }
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.BACKLOGS, JSON.stringify(backlogs));
-  }, [backlogs]);
+    setKnownUsers((prev) => {
+      const filtered = prev.filter((u) => u.id !== user.id);
+      return [user, ...filtered];
+    });
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.ERRORS, JSON.stringify(errors));
-  }, [errors]);
+    const data = loadUserScopedData(user.id, user.name);
+    setProfile(data.profile);
+    setTodos(data.todos);
+    setCheckIns(data.checkIns);
+    setSessions(data.sessions);
+    setTrackingStateMap(data.tracking);
+    setBacklogs(data.backlogs);
+    setErrors(data.errors);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.CHECK_INS, JSON.stringify(checkIns));
-  }, [checkIns]);
+    setCurrentUser(user);
+    localStorage.setItem(AUTH_KEYS.SESSION, JSON.stringify(user));
+    localStorage.setItem(AUTH_KEYS.ACTIVE_USER_ID, user.id);
+  };
+
+  const logout = () => {
+    if (currentUser) {
+      localStorage.setItem(getScopedKey(currentUser.id, 'profile'), JSON.stringify(profile));
+      localStorage.setItem(getScopedKey(currentUser.id, 'todos'), JSON.stringify(todos));
+      localStorage.setItem(getScopedKey(currentUser.id, 'checkins'), JSON.stringify(checkIns));
+      localStorage.setItem(getScopedKey(currentUser.id, 'sessions'), JSON.stringify(sessions));
+      localStorage.setItem(getScopedKey(currentUser.id, 'tracking'), JSON.stringify(trackingStateMap));
+      localStorage.setItem(getScopedKey(currentUser.id, 'backlogs'), JSON.stringify(backlogs));
+      localStorage.setItem(getScopedKey(currentUser.id, 'errors'), JSON.stringify(errors));
+    }
+
+    setCurrentUser(null);
+    localStorage.removeItem(AUTH_KEYS.SESSION);
+    localStorage.removeItem(AUTH_KEYS.ACTIVE_USER_ID);
+
+    const guestData = loadUserScopedData(null, 'Guest Aspirant');
+    setProfile(guestData.profile);
+    setTodos(guestData.todos);
+    setCheckIns(guestData.checkIns);
+    setSessions(guestData.sessions);
+    setTrackingStateMap(guestData.tracking);
+    setBacklogs(guestData.backlogs);
+    setErrors(guestData.errors);
+    setCurrentTab('login');
+  };
+
+  const switchAccount = (userId: string) => {
+    const target = knownUsers.find((u) => u.id === userId);
+    if (target) {
+      loginWithGoogle(target);
+    }
+  };
+
+  const removeAccountData = (userId: string) => {
+    ['profile', 'todos', 'checkins', 'sessions', 'tracking', 'backlogs', 'errors'].forEach((f) => {
+      localStorage.removeItem(getScopedKey(userId, f));
+    });
+    setKnownUsers((prev) => prev.filter((u) => u.id !== userId));
+    if (currentUser?.id === userId) {
+      logout();
+    }
+  };
 
   const todayDateStr = new Date().toISOString().split('T')[0];
   const todaysCheckIn = checkIns.find(c => c.date === todayDateStr);
@@ -636,30 +851,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const openProfileModal = () => setIsProfileModalOpen(true);
 
   const resetAllData = () => {
-    if (window.confirm("Are you sure you want to reset all Rankify data back to a completely clean fresh start?")) {
-      localStorage.clear();
-      setChapters(INITIAL_CHAPTERS.map(ch => ({ ...ch, isCompleted: false })));
+    if (window.confirm("Are you sure you want to reset your Rankify study data back to a clean start?")) {
+      if (currentUser) {
+        ['profile', 'todos', 'checkins', 'sessions', 'tracking', 'backlogs', 'errors'].forEach(f => {
+          localStorage.removeItem(getScopedKey(currentUser.id, f));
+        });
+      }
       setTrackingStateMap({});
       setTodos([]);
-      setFormulas(INITIAL_FORMULAS);
       setSessions([]);
       setBacklogs([]);
       setErrors([]);
       setCheckIns([]);
-      setProfile({
-        name: 'Jitanshu',
-        targetExam: 'JEE Advanced 2027 (AIR < 500)',
-        targetYear: 2027,
-        examGoal: 'JEE Advanced',
-        targetRank: 'AIR < 500',
-        dreamCollege: 'IIT Bombay',
-        dailyHourGoal: 8,
-        currentStreak: 0,
-        bestStreak: 0,
-        streakGoalTarget: 3,
-        lastActiveDate: new Date().toISOString().split('T')[0],
-        isOnboarded: false
-      });
+      setProfile(createDefaultProfile(currentUser?.name || 'Jitanshu'));
     }
   };
 
@@ -670,6 +874,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCurrentTab,
         isDarkMode,
         toggleDarkMode,
+        currentUser,
+        loginWithGoogle,
+        logout,
+        switchAccount,
+        removeAccountData,
+        knownUsers,
         profile,
         updateProfile,
         isProfileModalOpen,

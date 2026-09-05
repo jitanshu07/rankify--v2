@@ -113,6 +113,16 @@ export interface AIMessage {
   extractedTasks?: { title: string; subject: string; priority: PriorityType }[];
 }
 
+export interface AuthUser {
+  id: string; // Unique Google User ID (sub)
+  name: string;
+  email: string;
+  avatarUrl?: string;
+  provider: 'google';
+  createdAt: string;
+  lastLoginAt: string;
+}
+
 export type NavTab = 
   | 'home'
   | 'ai-mentor'
@@ -122,5 +132,6 @@ export type NavTab =
   | 'todo'
   | 'timer'
   | 'tools'
-  | 'analytics';
+  | 'analytics'
+  | 'login';
 

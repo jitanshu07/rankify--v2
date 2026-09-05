@@ -29,7 +29,9 @@ export const TodoScreen: React.FC = () => {
     applyRoutineTemplate, 
     profile,
     triggerEndOfDayCheck,
-    clearPenaltyNotice
+    clearPenaltyNotice,
+    currentUser,
+    setCurrentTab
   } = useApp();
 
   const [title, setTitle] = useState('');
@@ -144,6 +146,39 @@ export const TodoScreen: React.FC = () => {
           <button onClick={() => setAuditResult(null)} className="text-xs underline ml-2 cursor-pointer">Dismiss</button>
         </div>
       )}
+
+      {/* User Account Link & Isolation Indicator */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 py-2.5 rounded-2xl bg-[#0F1726] border border-slate-800 text-xs">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
+          {currentUser ? (
+            <span className="text-slate-300">
+              Account-Linked: <strong className="text-white">{currentUser.name}</strong> ({currentUser.email}) • Tasks, EXP & Streak mapped to <code className="text-cyan-400 text-[11px] font-mono">{currentUser.id}</code>
+            </span>
+          ) : (
+            <span className="text-slate-400">
+              Using Guest Partition. <span className="text-amber-400 font-semibold">Sign in with Google</span> to isolate your To-Dos, EXP, and Streak on your user ID.
+            </span>
+          )}
+        </div>
+        {!currentUser ? (
+          <button
+            type="button"
+            onClick={() => setCurrentTab('login')}
+            className="text-cyan-400 hover:text-cyan-300 font-bold underline cursor-pointer text-[11px] self-start sm:self-auto"
+          >
+            Sign In with Google →
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setCurrentTab('login')}
+            className="text-slate-400 hover:text-slate-200 text-[11px] cursor-pointer self-start sm:self-auto"
+          >
+            Switch Account →
+          </button>
+        )}
+      </div>
 
       {/* Task Creation Card */}
       <form onSubmit={handleAddTodo} className="p-4 rounded-2xl bg-[#121A27] border border-slate-800 space-y-3 shadow-md">

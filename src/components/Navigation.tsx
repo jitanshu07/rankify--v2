@@ -10,7 +10,9 @@ import {
   Timer, 
   Wrench, 
   BarChart3,
-  Brain
+  Brain,
+  ShieldCheck,
+  UserCheck
 } from 'lucide-react';
 
 interface TabItem {
@@ -21,7 +23,7 @@ interface TabItem {
 }
 
 export const Navigation: React.FC = () => {
-  const { currentTab, setCurrentTab, todos } = useApp();
+  const { currentTab, setCurrentTab, todos, currentUser } = useApp();
 
   const pendingTodosCount = todos.filter((t) => !t.isCompleted).length;
 
@@ -35,6 +37,12 @@ export const Navigation: React.FC = () => {
     { id: 'timer', label: 'Timer', icon: Timer },
     { id: 'tools', label: 'Tools', icon: Wrench },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { 
+      id: 'login', 
+      label: currentUser ? 'Account' : 'Google Auth', 
+      icon: currentUser ? UserCheck : ShieldCheck, 
+      badge: !currentUser ? 'Login' : undefined 
+    },
   ];
 
   return (
