@@ -39,9 +39,9 @@ export const Navigation: React.FC = () => {
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { 
       id: 'login', 
-      label: currentUser ? 'Account' : 'Google Auth', 
+      label: currentUser ? 'Account' : 'Sign In', 
       icon: currentUser ? UserCheck : ShieldCheck, 
-      badge: !currentUser ? 'Login' : undefined 
+      badge: !currentUser ? 'New' : undefined 
     },
   ];
 

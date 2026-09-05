@@ -12,7 +12,8 @@ import {
   PriorityType, 
   RoutineTemplate,
   DailyCheckIn,
-  AuthUser
+  AuthUser,
+  UserAccountRecord
 } from '../types';
 import { 
   INITIAL_CHAPTERS, 
@@ -28,13 +29,16 @@ interface AppContextType {
   isDarkMode: boolean;
   toggleDarkMode: () => void;
   
-  // Google Authentication & Data Separation
+  // Isolated Authentication & Multi-User Partitioning
   currentUser: AuthUser | null;
+  signUpWithEmail: (name: string, email: string, password: string, exam?: string, year?: number) => { success: boolean; error?: string };
+  loginWithEmail: (email: string, password: string) => { success: boolean; error?: string };
   loginWithGoogle: (user: AuthUser, options?: { importGuestData?: boolean }) => void;
   logout: () => void;
   switchAccount: (userId: string) => void;
   removeAccountData: (userId: string) => void;
   knownUsers: AuthUser[];
+  registeredAccounts: UserAccountRecord[];
 
   // Profile
   profile: UserProfile;
@@ -106,22 +110,12 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const AUTH_KEYS = {
-  SESSION: 'rankify_auth_session',
-  ACTIVE_USER_ID: 'rankify_active_user_id',
-  KNOWN_USERS: 'rankify_known_users',
+  SESSION: 'rankify_auth_session_v3',
+  ACTIVE_USER_ID: 'rankify_active_user_id_v3',
+  KNOWN_USERS: 'rankify_known_users_v3',
+  REGISTERED_ACCOUNTS: 'rankify_registered_accounts_v3',
   THEME: 'rankify_theme_v2',
-  CHAPTERS: 'rankify_chapters_v2',
   FORMULAS: 'rankify_formulas_v2',
-};
-
-const DEFAULT_JITANSHU_USER: AuthUser = {
-  id: 'google_sub_109283749102837465',
-  name: 'Jitanshu Kumar',
-  email: 'jitanshukumar601@gmail.com',
-  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-  provider: 'google',
-  createdAt: '2026-09-01T00:00:00.000Z',
-  lastLoginAt: new Date().toISOString(),
 };
 
 const getScopedKey = (userId: string | null | undefined, feature: string) => {
@@ -131,10 +125,10 @@ const getScopedKey = (userId: string | null | undefined, feature: string) => {
   return `rankify_guest_${feature}`;
 };
 
-const createDefaultProfile = (name: string): UserProfile => ({
-  name: name || 'Jitanshu',
-  targetExam: 'JEE Advanced 2027 (AIR < 500)',
-  targetYear: 2027,
+const createDefaultProfile = (name?: string, targetExam?: string, targetYear?: number): UserProfile => ({
+  name: name?.trim() || 'Aspirant',
+  targetExam: targetExam || 'JEE Advanced 2027 (AIR < 500)',
+  targetYear: targetYear || 2027,
   examGoal: 'JEE Advanced',
   targetRank: 'AIR < 500',
   dreamCollege: 'IIT Bombay',
@@ -149,8 +143,13 @@ const createDefaultProfile = (name: string): UserProfile => ({
   lastPenaltyReason: '',
 });
 
-const loadUserScopedData = (userId: string | null, userName?: string) => {
-  // Profile
+const loadUserScopedData = (
+  userId: string | null, 
+  userName?: string, 
+  targetExam?: string, 
+  targetYear?: number
+) => {
+  // Profile (strictly starts at 0 EXP & 0 streak if new)
   const profileKey = getScopedKey(userId, 'profile');
   const savedProfile = localStorage.getItem(profileKey);
   let loadedProfile: UserProfile;
@@ -158,26 +157,17 @@ const loadUserScopedData = (userId: string | null, userName?: string) => {
     try {
       loadedProfile = JSON.parse(savedProfile);
     } catch {
-      loadedProfile = createDefaultProfile(userName || 'Aspirant');
+      loadedProfile = createDefaultProfile(userName, targetExam, targetYear);
     }
   } else {
-    const legacy = localStorage.getItem('rankify_profile_v2');
-    if (legacy && (userId === DEFAULT_JITANSHU_USER.id || userName?.toLowerCase().includes('jitanshu'))) {
-      try {
-        loadedProfile = JSON.parse(legacy);
-      } catch {
-        loadedProfile = createDefaultProfile(userName || 'Jitanshu');
-      }
-    } else {
-      loadedProfile = createDefaultProfile(userName || (userId ? 'Google Aspirant' : 'Aspirant'));
-    }
+    loadedProfile = createDefaultProfile(userName, targetExam, targetYear);
     localStorage.setItem(profileKey, JSON.stringify(loadedProfile));
   }
 
-  // Todos
+  // Todos (strictly empty list for new users/guests)
   const todosKey = getScopedKey(userId, 'todos');
   const savedTodos = localStorage.getItem(todosKey);
-  let loadedTodos: TodoItem[];
+  let loadedTodos: TodoItem[] = [];
   if (savedTodos) {
     try {
       loadedTodos = JSON.parse(savedTodos);
@@ -185,23 +175,14 @@ const loadUserScopedData = (userId: string | null, userName?: string) => {
       loadedTodos = [];
     }
   } else {
-    const legacyTodos = localStorage.getItem('rankify_todos_v2');
-    if (legacyTodos && (userId === DEFAULT_JITANSHU_USER.id || userName?.toLowerCase().includes('jitanshu'))) {
-      try {
-        loadedTodos = JSON.parse(legacyTodos);
-      } catch {
-        loadedTodos = [];
-      }
-    } else {
-      loadedTodos = [];
-    }
+    loadedTodos = [];
     localStorage.setItem(todosKey, JSON.stringify(loadedTodos));
   }
 
   // Check-ins
   const checkinsKey = getScopedKey(userId, 'checkins');
   const savedCheckins = localStorage.getItem(checkinsKey);
-  let loadedCheckins: DailyCheckIn[];
+  let loadedCheckins: DailyCheckIn[] = [];
   if (savedCheckins) {
     try {
       loadedCheckins = JSON.parse(savedCheckins);
@@ -209,16 +190,7 @@ const loadUserScopedData = (userId: string | null, userName?: string) => {
       loadedCheckins = [];
     }
   } else {
-    const legacyCheckins = localStorage.getItem('rankify_checkins_v2');
-    if (legacyCheckins && (userId === DEFAULT_JITANSHU_USER.id || userName?.toLowerCase().includes('jitanshu'))) {
-      try {
-        loadedCheckins = JSON.parse(legacyCheckins);
-      } catch {
-        loadedCheckins = [];
-      }
-    } else {
-      loadedCheckins = [];
-    }
+    loadedCheckins = [];
     localStorage.setItem(checkinsKey, JSON.stringify(loadedCheckins));
   }
 
@@ -270,6 +242,20 @@ const loadUserScopedData = (userId: string | null, userName?: string) => {
     }
   }
 
+  // Chapters (syllabus completion scoped per-user so new users start at 0% / false)
+  const chaptersKey = getScopedKey(userId, 'chapters');
+  const savedChapters = localStorage.getItem(chaptersKey);
+  let loadedChapters: Chapter[];
+  if (savedChapters) {
+    try {
+      loadedChapters = JSON.parse(savedChapters);
+    } catch {
+      loadedChapters = INITIAL_CHAPTERS.map((ch) => ({ ...ch, isCompleted: false }));
+    }
+  } else {
+    loadedChapters = INITIAL_CHAPTERS.map((ch) => ({ ...ch, isCompleted: false }));
+  }
+
   return {
     profile: loadedProfile,
     todos: loadedTodos,
@@ -278,6 +264,7 @@ const loadUserScopedData = (userId: string | null, userName?: string) => {
     tracking: loadedTracking,
     backlogs: loadedBacklogs,
     errors: loadedErrors,
+    chapters: loadedChapters,
   };
 };
 
@@ -289,25 +276,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved !== null ? saved === 'true' : true;
   });
 
-  // Known Google accounts on this device
+  // Known accounts on this device (starts empty on new device/browser)
   const [knownUsers, setKnownUsers] = useState<AuthUser[]>(() => {
     const saved = localStorage.getItem(AUTH_KEYS.KNOWN_USERS);
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { /* ignore */ }
     }
-    return [DEFAULT_JITANSHU_USER];
+    return [];
   });
 
-  // Current logged in user (defaults to Jitanshu Kumar)
+  // Registered local/email accounts on this device
+  const [registeredAccounts, setRegisteredAccounts] = useState<UserAccountRecord[]>(() => {
+    const saved = localStorage.getItem(AUTH_KEYS.REGISTERED_ACCOUNTS);
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+    }
+    return [];
+  });
+
+  // Current logged in user (null by default on a fresh device/browser -> starts fresh at 0)
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
     const saved = localStorage.getItem(AUTH_KEYS.SESSION);
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { /* ignore */ }
     }
-    return DEFAULT_JITANSHU_USER;
+    return null;
   });
 
-  // Initial scoped load for active user
+  // Initial scoped load for active user (or fresh 0 state for guest)
   const initialData = loadUserScopedData(currentUser?.id || null, currentUser?.name);
 
   const [profile, setProfile] = useState<UserProfile>(initialData.profile);
@@ -317,14 +313,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [trackingStateMap, setTrackingStateMap] = useState<Record<number, ChapterTrackingState>>(initialData.tracking);
   const [backlogs, setBacklogs] = useState<BacklogItem[]>(initialData.backlogs);
   const [errors, setErrors] = useState<ErrorLog[]>(initialData.errors);
-
-  const [chapters, setChapters] = useState<Chapter[]>(() => {
-    const saved = localStorage.getItem(AUTH_KEYS.CHAPTERS);
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
-    }
-    return INITIAL_CHAPTERS;
-  });
+  const [chapters, setChapters] = useState<Chapter[]>(initialData.chapters);
 
   const [formulas, setFormulas] = useState<Formula[]>(() => {
     const saved = localStorage.getItem(AUTH_KEYS.FORMULAS);
@@ -357,10 +346,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [currentUser]);
 
-  // Persist Known Users
+  // Persist Known Users & Registered Accounts
   useEffect(() => {
     localStorage.setItem(AUTH_KEYS.KNOWN_USERS, JSON.stringify(knownUsers));
   }, [knownUsers]);
+
+  useEffect(() => {
+    localStorage.setItem(AUTH_KEYS.REGISTERED_ACCOUNTS, JSON.stringify(registeredAccounts));
+  }, [registeredAccounts]);
 
   // Persist Per-User Scoped Data
   useEffect(() => {
@@ -399,31 +392,181 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [errors, currentUser]);
 
   useEffect(() => {
-    localStorage.setItem(AUTH_KEYS.CHAPTERS, JSON.stringify(chapters));
-  }, [chapters]);
+    const key = getScopedKey(currentUser?.id, 'chapters');
+    localStorage.setItem(key, JSON.stringify(chapters));
+  }, [chapters, currentUser]);
 
   useEffect(() => {
     localStorage.setItem(AUTH_KEYS.FORMULAS, JSON.stringify(formulas));
   }, [formulas]);
 
-  // Google Authentication Functions
+  // Helper to flush current in-memory partition to localStorage before switching accounts
+  const flushCurrentUserData = () => {
+    const targetId = currentUser?.id || null;
+    localStorage.setItem(getScopedKey(targetId, 'profile'), JSON.stringify(profile));
+    localStorage.setItem(getScopedKey(targetId, 'todos'), JSON.stringify(todos));
+    localStorage.setItem(getScopedKey(targetId, 'checkins'), JSON.stringify(checkIns));
+    localStorage.setItem(getScopedKey(targetId, 'sessions'), JSON.stringify(sessions));
+    localStorage.setItem(getScopedKey(targetId, 'tracking'), JSON.stringify(trackingStateMap));
+    localStorage.setItem(getScopedKey(targetId, 'backlogs'), JSON.stringify(backlogs));
+    localStorage.setItem(getScopedKey(targetId, 'errors'), JSON.stringify(errors));
+    localStorage.setItem(getScopedKey(targetId, 'chapters'), JSON.stringify(chapters));
+  };
+
+  // Sign Up with Email / Password (starts completely fresh at 0)
+  const signUpWithEmail = (
+    name: string,
+    email: string,
+    password: string,
+    exam?: string,
+    year?: number
+  ): { success: boolean; error?: string } => {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = name.trim();
+
+    if (!cleanEmail || !cleanName || !password) {
+      return { success: false, error: 'Name, email, and password are all required.' };
+    }
+    if (password.length < 6) {
+      return { success: false, error: 'Password must be at least 6 characters long.' };
+    }
+
+    const existing = registeredAccounts.find((a) => a.email.toLowerCase() === cleanEmail);
+    if (existing) {
+      return { success: false, error: 'An account with this email already exists. Please sign in.' };
+    }
+
+    const userId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const passwordHash = btoa(encodeURIComponent(password));
+
+    const newAccount: UserAccountRecord = {
+      id: userId,
+      name: cleanName,
+      email: cleanEmail,
+      passwordHash,
+      provider: 'local',
+      createdAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+      targetExam: exam || 'JEE Advanced 2027 (AIR < 500)',
+      targetYear: year || 2027,
+    };
+
+    flushCurrentUserData();
+
+    // Load completely fresh clean 0 state for this new user
+    const data = loadUserScopedData(userId, cleanName, newAccount.targetExam, newAccount.targetYear);
+    setProfile(data.profile);
+    setTodos(data.todos);
+    setCheckIns(data.checkIns);
+    setSessions(data.sessions);
+    setTrackingStateMap(data.tracking);
+    setBacklogs(data.backlogs);
+    setErrors(data.errors);
+    setChapters(data.chapters);
+
+    const authUser: AuthUser = {
+      id: userId,
+      name: cleanName,
+      email: cleanEmail,
+      provider: 'local',
+      createdAt: newAccount.createdAt,
+      lastLoginAt: newAccount.lastLoginAt,
+    };
+
+    setRegisteredAccounts((prev) => [newAccount, ...prev.filter((a) => a.id !== userId)]);
+    setKnownUsers((prev) => [authUser, ...prev.filter((u) => u.id !== userId)]);
+    setCurrentUser(authUser);
+
+    return { success: true };
+  };
+
+  // Login with Email / Password
+  const loginWithEmail = (email: string, password: string): { success: boolean; error?: string } => {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !password) {
+      return { success: false, error: 'Please enter both your email and password.' };
+    }
+
+    const account = registeredAccounts.find((a) => a.email.toLowerCase() === cleanEmail);
+    if (!account) {
+      return { success: false, error: 'No account found with this email. Please sign up first.' };
+    }
+
+    const inputHash = btoa(encodeURIComponent(password));
+    if (account.passwordHash !== inputHash) {
+      return { success: false, error: 'Incorrect password. Please try again.' };
+    }
+
+    flushCurrentUserData();
+
+    const updatedAccount: UserAccountRecord = {
+      ...account,
+      lastLoginAt: new Date().toISOString(),
+    };
+
+    const authUser: AuthUser = {
+      id: account.id,
+      name: account.name,
+      email: account.email,
+      avatarUrl: account.avatarUrl,
+      provider: account.provider,
+      createdAt: account.createdAt,
+      lastLoginAt: updatedAccount.lastLoginAt,
+    };
+
+    const data = loadUserScopedData(account.id, account.name, account.targetExam, account.targetYear);
+    setProfile(data.profile);
+    setTodos(data.todos);
+    setCheckIns(data.checkIns);
+    setSessions(data.sessions);
+    setTrackingStateMap(data.tracking);
+    setBacklogs(data.backlogs);
+    setErrors(data.errors);
+    setChapters(data.chapters);
+
+    setRegisteredAccounts((prev) => [updatedAccount, ...prev.filter((a) => a.id !== account.id)]);
+    setKnownUsers((prev) => [authUser, ...prev.filter((u) => u.id !== account.id)]);
+    setCurrentUser(authUser);
+
+    return { success: true };
+  };
+
+  // Google Authentication Function
   const loginWithGoogle = (user: AuthUser, options?: { importGuestData?: boolean }) => {
-    // Save current active state before switching
-    if (currentUser) {
-      localStorage.setItem(getScopedKey(currentUser.id, 'profile'), JSON.stringify(profile));
-      localStorage.setItem(getScopedKey(currentUser.id, 'todos'), JSON.stringify(todos));
-      localStorage.setItem(getScopedKey(currentUser.id, 'checkins'), JSON.stringify(checkIns));
-      localStorage.setItem(getScopedKey(currentUser.id, 'sessions'), JSON.stringify(sessions));
-      localStorage.setItem(getScopedKey(currentUser.id, 'tracking'), JSON.stringify(trackingStateMap));
-      localStorage.setItem(getScopedKey(currentUser.id, 'backlogs'), JSON.stringify(backlogs));
-      localStorage.setItem(getScopedKey(currentUser.id, 'errors'), JSON.stringify(errors));
-    } else if (options?.importGuestData) {
+    flushCurrentUserData();
+
+    if (options?.importGuestData) {
       localStorage.setItem(getScopedKey(user.id, 'profile'), JSON.stringify(profile));
       localStorage.setItem(getScopedKey(user.id, 'todos'), JSON.stringify(todos));
       localStorage.setItem(getScopedKey(user.id, 'checkins'), JSON.stringify(checkIns));
       localStorage.setItem(getScopedKey(user.id, 'sessions'), JSON.stringify(sessions));
       localStorage.setItem(getScopedKey(user.id, 'tracking'), JSON.stringify(trackingStateMap));
+      localStorage.setItem(getScopedKey(user.id, 'backlogs'), JSON.stringify(backlogs));
+      localStorage.setItem(getScopedKey(user.id, 'errors'), JSON.stringify(errors));
+      localStorage.setItem(getScopedKey(user.id, 'chapters'), JSON.stringify(chapters));
     }
+
+    setRegisteredAccounts((prev) => {
+      const existing = prev.find((a) => a.id === user.id || a.email.toLowerCase() === user.email.toLowerCase());
+      if (existing) {
+        return prev.map((a) =>
+          a.id === existing.id
+            ? { ...a, lastLoginAt: new Date().toISOString(), avatarUrl: user.avatarUrl || a.avatarUrl }
+            : a
+        );
+      }
+      const newRecord: UserAccountRecord = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        passwordHash: '',
+        avatarUrl: user.avatarUrl,
+        provider: 'google',
+        createdAt: user.createdAt,
+        lastLoginAt: new Date().toISOString(),
+      };
+      return [newRecord, ...prev];
+    });
 
     setKnownUsers((prev) => {
       const filtered = prev.filter((u) => u.id !== user.id);
@@ -438,28 +581,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTrackingStateMap(data.tracking);
     setBacklogs(data.backlogs);
     setErrors(data.errors);
+    setChapters(data.chapters);
 
     setCurrentUser(user);
-    localStorage.setItem(AUTH_KEYS.SESSION, JSON.stringify(user));
-    localStorage.setItem(AUTH_KEYS.ACTIVE_USER_ID, user.id);
   };
 
   const logout = () => {
-    if (currentUser) {
-      localStorage.setItem(getScopedKey(currentUser.id, 'profile'), JSON.stringify(profile));
-      localStorage.setItem(getScopedKey(currentUser.id, 'todos'), JSON.stringify(todos));
-      localStorage.setItem(getScopedKey(currentUser.id, 'checkins'), JSON.stringify(checkIns));
-      localStorage.setItem(getScopedKey(currentUser.id, 'sessions'), JSON.stringify(sessions));
-      localStorage.setItem(getScopedKey(currentUser.id, 'tracking'), JSON.stringify(trackingStateMap));
-      localStorage.setItem(getScopedKey(currentUser.id, 'backlogs'), JSON.stringify(backlogs));
-      localStorage.setItem(getScopedKey(currentUser.id, 'errors'), JSON.stringify(errors));
-    }
+    flushCurrentUserData();
 
     setCurrentUser(null);
     localStorage.removeItem(AUTH_KEYS.SESSION);
     localStorage.removeItem(AUTH_KEYS.ACTIVE_USER_ID);
 
-    const guestData = loadUserScopedData(null, 'Guest Aspirant');
+    // Load fresh 0-state guest partition
+    const guestData = loadUserScopedData(null, 'Aspirant');
     setProfile(guestData.profile);
     setTodos(guestData.todos);
     setCheckIns(guestData.checkIns);
@@ -467,21 +602,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTrackingStateMap(guestData.tracking);
     setBacklogs(guestData.backlogs);
     setErrors(guestData.errors);
+    setChapters(guestData.chapters);
     setCurrentTab('login');
   };
 
   const switchAccount = (userId: string) => {
     const target = knownUsers.find((u) => u.id === userId);
-    if (target) {
-      loginWithGoogle(target);
-    }
+    if (!target) return;
+
+    flushCurrentUserData();
+
+    const data = loadUserScopedData(target.id, target.name);
+    setProfile(data.profile);
+    setTodos(data.todos);
+    setCheckIns(data.checkIns);
+    setSessions(data.sessions);
+    setTrackingStateMap(data.tracking);
+    setBacklogs(data.backlogs);
+    setErrors(data.errors);
+    setChapters(data.chapters);
+
+    setCurrentUser(target);
   };
 
   const removeAccountData = (userId: string) => {
-    ['profile', 'todos', 'checkins', 'sessions', 'tracking', 'backlogs', 'errors'].forEach((f) => {
+    ['profile', 'todos', 'checkins', 'sessions', 'tracking', 'backlogs', 'errors', 'chapters'].forEach((f) => {
       localStorage.removeItem(getScopedKey(userId, f));
     });
     setKnownUsers((prev) => prev.filter((u) => u.id !== userId));
+    setRegisteredAccounts((prev) => prev.filter((a) => a.id !== userId));
     if (currentUser?.id === userId) {
       logout();
     }
@@ -851,19 +1000,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const openProfileModal = () => setIsProfileModalOpen(true);
 
   const resetAllData = () => {
-    if (window.confirm("Are you sure you want to reset your Rankify study data back to a clean start?")) {
-      if (currentUser) {
-        ['profile', 'todos', 'checkins', 'sessions', 'tracking', 'backlogs', 'errors'].forEach(f => {
-          localStorage.removeItem(getScopedKey(currentUser.id, f));
-        });
-      }
+    if (window.confirm("Are you sure you want to reset your Rankify study data back to 0?")) {
+      const targetId = currentUser?.id || null;
+      ['profile', 'todos', 'checkins', 'sessions', 'tracking', 'backlogs', 'errors', 'chapters'].forEach((f) => {
+        localStorage.removeItem(getScopedKey(targetId, f));
+      });
       setTrackingStateMap({});
       setTodos([]);
       setSessions([]);
       setBacklogs([]);
       setErrors([]);
       setCheckIns([]);
-      setProfile(createDefaultProfile(currentUser?.name || 'Jitanshu'));
+      setChapters(INITIAL_CHAPTERS.map((ch) => ({ ...ch, isCompleted: false })));
+      setProfile(createDefaultProfile(currentUser?.name || 'Aspirant'));
     }
   };
 
@@ -875,11 +1024,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isDarkMode,
         toggleDarkMode,
         currentUser,
+        signUpWithEmail,
+        loginWithEmail,
         loginWithGoogle,
         logout,
         switchAccount,
         removeAccountData,
         knownUsers,
+        registeredAccounts,
         profile,
         updateProfile,
         isProfileModalOpen,

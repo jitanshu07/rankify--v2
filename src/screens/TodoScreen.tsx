@@ -157,7 +157,7 @@ export const TodoScreen: React.FC = () => {
             </span>
           ) : (
             <span className="text-slate-400">
-              Using Guest Partition. <span className="text-amber-400 font-semibold">Sign in with Google</span> to isolate your To-Dos, EXP, and Streak on your user ID.
+              Using Guest Partition. <span className="text-amber-400 font-semibold">Sign in or create an account</span> to isolate your To-Dos, EXP, and Streak on your personal user ID.
             </span>
           )}
         </div>
@@ -167,7 +167,7 @@ export const TodoScreen: React.FC = () => {
             onClick={() => setCurrentTab('login')}
             className="text-cyan-400 hover:text-cyan-300 font-bold underline cursor-pointer text-[11px] self-start sm:self-auto"
           >
-            Sign In with Google →
+            Sign In / Sign Up →
           </button>
         ) : (
           <button

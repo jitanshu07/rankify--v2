@@ -114,13 +114,26 @@ export interface AIMessage {
 }
 
 export interface AuthUser {
-  id: string; // Unique Google User ID (sub)
+  id: string; // Unique User ID (e.g. usr_... or google_...)
   name: string;
   email: string;
   avatarUrl?: string;
-  provider: 'google';
+  provider: 'local' | 'google';
   createdAt: string;
   lastLoginAt: string;
+}
+
+export interface UserAccountRecord {
+  id: string;
+  name: string;
+  email: string;
+  passwordHash: string;
+  avatarUrl?: string;
+  provider: 'local' | 'google';
+  createdAt: string;
+  lastLoginAt: string;
+  targetExam?: string;
+  targetYear?: number;
 }
 
 export type NavTab = 
