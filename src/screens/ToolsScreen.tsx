@@ -9,6 +9,7 @@ import {
   Plus, 
   Check, 
   Trash2, 
+  Edit2,
   CheckCircle2, 
   X, 
   Sparkles,
@@ -29,7 +30,8 @@ export const ToolsScreen: React.FC = () => {
     addBacklog,
     toggleBacklog,
     toggleBacklogLecture,
-    deleteBacklog
+    deleteBacklog,
+    editBacklog
   } = useApp();
 
   const [activeSubTab, setActiveSubTab] = useState<ToolSubTab>('errorBook');
@@ -45,12 +47,35 @@ export const ToolsScreen: React.FC = () => {
 
   // Backlog modal state
   const [showBacklogModal, setShowBacklogModal] = useState(false);
+  const [editingBacklog, setEditingBacklog] = useState<BacklogItem | null>(null);
+  
   const [blTitle, setBlTitle] = useState('');
   const [blSubject, setBlSubject] = useState('Physics');
   const [blDate, setBlDate] = useState('By this weekend');
   const [blUrgency, setBlUrgency] = useState<'Critical' | 'High' | 'Medium'>('Critical');
   const [blLectureFrom, setBlLectureFrom] = useState<number>(1);
   const [blLectureTo, setBlLectureTo] = useState<number>(1);
+
+  const openBacklogModal = (item?: BacklogItem) => {
+    if (item) {
+      setEditingBacklog(item);
+      setBlTitle(item.title);
+      setBlSubject(item.subject);
+      setBlDate(item.targetDate);
+      setBlUrgency(item.urgency);
+      setBlLectureFrom(item.lectureFrom || 1);
+      setBlLectureTo(item.lectureTo || 1);
+    } else {
+      setEditingBacklog(null);
+      setBlTitle('');
+      setBlSubject('Physics');
+      setBlDate('By this weekend');
+      setBlUrgency('Critical');
+      setBlLectureFrom(1);
+      setBlLectureTo(1);
+    }
+    setShowBacklogModal(true);
+  };
 
   // Rank Predictor state
   const [physMarks, setPhysMarks] = useState<number>(75);
@@ -124,9 +149,23 @@ export const ToolsScreen: React.FC = () => {
   const handleAddBacklogSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!blTitle.trim()) return;
-    addBacklog(blTitle.trim(), blSubject, blDate.trim(), blUrgency, blLectureFrom, blLectureTo);
+    
+    if (editingBacklog) {
+      editBacklog(editingBacklog.id, {
+        title: blTitle.trim(),
+        subject: blSubject,
+        targetDate: blDate.trim(),
+        urgency: blUrgency,
+        lectureFrom: blLectureFrom,
+        lectureTo: blLectureTo
+      });
+    } else {
+      addBacklog(blTitle.trim(), blSubject, blDate.trim(), blUrgency, blLectureFrom, blLectureTo);
+    }
+    
     setBlTitle('');
     setShowBacklogModal(false);
+    setEditingBacklog(null);
   };
 
   // Calculator evaluation
@@ -372,7 +411,11 @@ export const ToolsScreen: React.FC = () => {
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center flex-wrap gap-2 mb-1.5">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300">
+                        <span className={`text-xs font-bold px-2.5 py-0.5 rounded-md ${
+                          item.subject === 'Physics' ? 'bg-rose-500/20 text-rose-400' :
+                          item.subject === 'Chemistry' ? 'bg-emerald-500/20 text-emerald-400' :
+                          'bg-fuchsia-500/20 text-fuchsia-400'
+                        }`}>
                           {item.subject}
                         </span>
                         <span
@@ -400,29 +443,33 @@ export const ToolsScreen: React.FC = () => {
 
                       {/* Lecture Track */}
                       {item.lectureTo && item.lectureTo > 0 ? (
-                        <div className="flex flex-wrap gap-1.5 mt-3">
-                          {Array.from({ length: item.lectureTo }, (_, i) => i + 1).map(num => {
+                        <div className="flex flex-wrap items-center gap-1.5 mt-3">
+                          {Array.from({ length: item.lectureTo }, (_, i) => i + 1).map((num, idx) => {
                             const isBeforeTargetRange = item.lectureFrom && num < item.lectureFrom;
                             const isCompleted = isBeforeTargetRange || (item.completedLectures || []).includes(num);
                             
                             return (
-                              <button
-                                key={num}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (!isBeforeTargetRange) {
-                                    toggleBacklogLecture(item.id, num);
-                                  }
-                                }}
-                                disabled={!!isBeforeTargetRange}
-                                className={`w-7 h-7 flex items-center justify-center text-[10px] font-bold rounded-md shadow-sm transition-all ${
-                                  isCompleted
-                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                                    : 'bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/40 cursor-pointer'
-                                }`}
-                              >
-                                {num}
-                              </button>
+                              <React.Fragment key={num}>
+                                {idx === 0 && (
+                                  <span className="text-[10px] font-bold text-slate-400 mr-0.5">Lecture</span>
+                                )}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!isBeforeTargetRange) {
+                                      toggleBacklogLecture(item.id, num);
+                                    }
+                                  }}
+                                  disabled={!!isBeforeTargetRange}
+                                  className={`w-7 h-7 flex items-center justify-center text-[10px] font-bold rounded-md shadow-sm transition-all ${
+                                    isCompleted
+                                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                      : 'bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/40 cursor-pointer'
+                                  }`}
+                                >
+                                  {num}
+                                </button>
+                              </React.Fragment>
                             );
                           })}
                         </div>
@@ -430,12 +477,20 @@ export const ToolsScreen: React.FC = () => {
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => deleteBacklog(item.id)}
-                    className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 transition"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex flex-col gap-1 ml-2">
+                    <button
+                      onClick={() => openBacklogModal(item)}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 transition cursor-pointer"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => deleteBacklog(item.id)}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 transition cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               ))
             )}
@@ -718,8 +773,8 @@ export const ToolsScreen: React.FC = () => {
             </button>
 
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Clock className="w-5 h-5 text-amber-400" />
-              Add Pending Backlog Topic
+              {editingBacklog ? <Edit2 className="w-5 h-5 text-amber-400" /> : <Clock className="w-5 h-5 text-amber-400" />}
+              {editingBacklog ? 'Edit Backlog Topic' : 'Add Pending Backlog Topic'}
             </h2>
 
             <form onSubmit={handleAddBacklogSubmit} className="space-y-3.5 text-xs">
@@ -812,7 +867,7 @@ export const ToolsScreen: React.FC = () => {
                   type="submit"
                   className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold hover:opacity-90 transition shadow-md shadow-amber-500/20"
                 >
-                  Add Backlog
+                  {editingBacklog ? 'Save Changes' : 'Add Backlog'}
                 </button>
               </div>
             </form>

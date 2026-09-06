@@ -82,6 +82,7 @@ interface AppContextType {
   toggleBacklog: (id: string) => void;
   toggleBacklogLecture: (id: string, lectureNum: number) => void;
   deleteBacklog: (id: string) => void;
+  editBacklog: (id: string, updates: Partial<BacklogItem>) => void;
   
   // Error Book
   errors: ErrorLog[];
@@ -906,6 +907,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteBacklog = (id: string) => {
     setBacklogs(prev => prev.filter(b => b.id !== id));
+  };
+
+  const editBacklog = (id: string, updates: Partial<BacklogItem>) => {
+    setBacklogs(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
   };
 
   // Errors
