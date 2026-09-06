@@ -105,6 +105,35 @@ export const TimerScreen: React.FC = () => {
 
   // Timer Tick
   const lastTickTime = useRef<number>(0);
+  const msRef = useRef<HTMLSpanElement>(null);
+
+  // Fast Milliseconds Ticker (bypasses React state for 60fps smoothness)
+  useEffect(() => {
+    let animationId: number;
+    const updateMs = () => {
+      if (msRef.current && isRunning) {
+        const currentMs = Date.now() % 1000;
+        let displayMs = Math.floor(currentMs / 10); // 0-99
+        if (mode === 'pomodoro') {
+          displayMs = 99 - displayMs;
+        }
+        msRef.current.innerText = displayMs.toString().padStart(2, '0');
+        animationId = requestAnimationFrame(updateMs);
+      }
+    };
+
+    if (isRunning) {
+      animationId = requestAnimationFrame(updateMs);
+    } else {
+      if (msRef.current) {
+        msRef.current.innerText = '00';
+      }
+    }
+
+    return () => {
+      if (animationId) cancelAnimationFrame(animationId);
+    };
+  }, [isRunning, mode]);
 
   useEffect(() => {
     let interval: any = null;
@@ -395,13 +424,18 @@ export const TimerScreen: React.FC = () => {
           {/* Time text centered */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <div 
-              className={`text-5xl sm:text-6xl font-black font-mono tracking-tight drop-shadow-md transition-colors duration-500 ${
+              className={`flex items-baseline justify-center tracking-tight drop-shadow-md transition-colors duration-500 ${
                 isRunning 
                   ? `animate-pulse ${mode === 'pomodoro' && currentPhase !== 'work' ? 'text-emerald-400' : 'text-cyan-400'}`
                   : 'text-white'
               }`}
             >
-              {formatTime(mode === 'pomodoro' ? secondsRemaining : stopwatchSeconds)}
+              <span className="text-5xl sm:text-6xl font-black font-mono">
+                {formatTime(mode === 'pomodoro' ? secondsRemaining : stopwatchSeconds)}
+              </span>
+              <span ref={msRef} className="text-2xl sm:text-3xl ml-1 font-bold font-mono opacity-80">
+                00
+              </span>
             </div>
             <span className="text-xs text-slate-400 uppercase tracking-widest mt-2 font-semibold">
               {isRunning ? 'Session in Progress' : 'Paused / Ready'}
