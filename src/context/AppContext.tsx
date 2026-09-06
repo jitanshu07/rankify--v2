@@ -895,29 +895,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // End of Day Penalty Logic:
   // If day changed and there were incomplete tasks, reset streak and EXP to 0
+  // Runs robustly in a background interval so it triggers even if tab is minimized
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    setProfile(prev => {
-      const lastCheck = prev.lastCheckedDate;
-      if (!lastCheck) {
-        return { ...prev, lastCheckedDate: today };
-      }
-      if (lastCheck < today) {
-        const hadIncompleteTasks = todos.length > 0 && todos.some(t => !t.isCompleted);
-        if (hadIncompleteTasks) {
-          const incompleteCount = todos.filter(t => !t.isCompleted).length;
-          return {
-            ...prev,
-            currentStreak: 0,
-            exp: 0,
-            lastCheckedDate: today,
-            lastPenaltyReason: `End-of-day penalty applied: ${incompleteCount} task(s) were left incomplete on ${lastCheck}. Streak and EXP have been reset to 0.`
-          };
+    const checkDayChanged = () => {
+      const today = new Date().toISOString().split('T')[0];
+      setProfile(prev => {
+        const lastCheck = prev.lastCheckedDate;
+        if (!lastCheck) {
+          return { ...prev, lastCheckedDate: today };
         }
-        return { ...prev, lastCheckedDate: today };
+        if (lastCheck < today) {
+          const hadIncompleteTasks = todos.length > 0 && todos.some(t => !t.isCompleted);
+          if (hadIncompleteTasks) {
+            const incompleteCount = todos.filter(t => !t.isCompleted).length;
+            return {
+              ...prev,
+              currentStreak: 0,
+              exp: 0,
+              lastCheckedDate: today,
+              lastPenaltyReason: `End-of-day penalty applied: ${incompleteCount} task(s) were left incomplete on ${lastCheck}. Streak and EXP have been reset to 0.`
+            };
+          }
+          return { ...prev, lastCheckedDate: today };
+        }
+        return prev;
+      });
+    };
+
+    // Run once on mount/todos change
+    checkDayChanged();
+    
+    // Check periodically (every 1 minute) to ensure we catch midnight even if app is in background
+    const interval = setInterval(checkDayChanged, 60000);
+
+    // Check immediately when tab becomes visible after being suspended
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkDayChanged();
       }
-      return prev;
-    });
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [todos]);
 
   const triggerEndOfDayCheck = (): { penalized: boolean; message: string } => {

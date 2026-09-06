@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 
 export const TrackerScreen: React.FC = () => {
-  const { chapters, toggleChapterCompletion } = useApp();
+  const { chapters, toggleChapterCompletion, profile } = useApp();
 
   // Countdown timer state
   const [timeLeftMain, setTimeLeftMain] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -20,11 +20,11 @@ export const TrackerScreen: React.FC = () => {
   useEffect(() => {
     const calculateTime = () => {
       const now = new Date();
-      const currentYear = now.getFullYear();
+      const targetYear = profile.targetYear || 2027;
       
       // Estimated dates
-      const mainTarget = new Date(currentYear + 1, 0, 24, 9, 0, 0); // Jan 24 9:00 AM
-      const advTarget = new Date(currentYear + 1, 4, 25, 9, 0, 0);  // May 25 9:00 AM
+      const mainTarget = new Date(targetYear, 0, 24, 9, 0, 0); // Jan 24 9:00 AM of Target Year
+      const advTarget = new Date(targetYear, 4, 25, 9, 0, 0);  // May 25 9:00 AM of Target Year
 
       const diffM = Math.max(0, mainTarget.getTime() - now.getTime());
       const diffA = Math.max(0, advTarget.getTime() - now.getTime());

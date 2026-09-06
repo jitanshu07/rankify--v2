@@ -69,30 +69,45 @@ export const TimerScreen: React.FC = () => {
   };
 
   // Timer Tick
+  const lastTickTime = useRef<number>(0);
+
   useEffect(() => {
     let interval: any = null;
 
     if (isRunning) {
+      lastTickTime.current = Date.now();
+      // Run interval more frequently (500ms) to ensure smooth UI updates and quick catch-up when returning to tab
       interval = setInterval(() => {
-        if (mode === 'pomodoro') {
-          setSecondsRemaining((prev) => {
-            if (prev <= 1) {
-              playChime();
-              handlePhaseEnd();
-              return 0;
-            }
-            return prev - 1;
-          });
-        } else {
-          setStopwatchSeconds((prev) => prev + 1);
+        const now = Date.now();
+        const deltaSecs = Math.floor((now - lastTickTime.current) / 1000);
+        
+        if (deltaSecs >= 1) {
+          lastTickTime.current += deltaSecs * 1000;
+          
+          if (mode === 'pomodoro') {
+            setSecondsRemaining((prev) => {
+              const next = Math.max(0, prev - deltaSecs);
+              return next;
+            });
+          } else {
+            setStopwatchSeconds((prev) => prev + deltaSecs);
+          }
         }
-      }, 1000);
+      }, 500);
     } else {
       clearInterval(interval);
     }
 
     return () => clearInterval(interval);
-  }, [isRunning, mode, currentPhase, completedCycles, workDurationMins, shortBreakMins, longBreakMins]);
+  }, [isRunning, mode]);
+
+  // Handle phase end separately to avoid side-effects inside state updaters
+  useEffect(() => {
+    if (isRunning && mode === 'pomodoro' && secondsRemaining === 0) {
+      playChime();
+      handlePhaseEnd();
+    }
+  }, [secondsRemaining, isRunning, mode, currentPhase, completedCycles, workDurationMins, shortBreakMins, longBreakMins]);
 
   const handlePhaseEnd = () => {
     setIsRunning(false);
