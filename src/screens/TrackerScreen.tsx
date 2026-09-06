@@ -7,11 +7,16 @@ import {
   CheckCircle2, 
   Clock, 
   Layers, 
-  Check 
+  Check,
+  Filter
 } from 'lucide-react';
 
 export const TrackerScreen: React.FC = () => {
   const { chapters, toggleChapterCompletion, profile } = useApp();
+
+  // Filter states
+  const [filterSubject, setFilterSubject] = useState<'All' | 'Physics' | 'Chemistry' | 'Mathematics'>('All');
+  const [filterClass, setFilterClass] = useState<'All' | 'Class 11' | 'Class 12'>('All');
 
   // Countdown timer state
   const [timeLeftMain, setTimeLeftMain] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -49,19 +54,26 @@ export const TrackerScreen: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // Apply filters
+  const filteredChapters = chapters.filter(c => {
+    if (filterSubject !== 'All' && c.subject !== filterSubject) return false;
+    if (filterClass !== 'All' && c.classGrade !== filterClass) return false;
+    return true;
+  });
+
   // High weightage chapters
-  const highWeightageChapters = chapters.filter((c) => c.weightage === 'High');
+  const highWeightageChapters = filteredChapters.filter((c) => c.weightage === 'High');
   const highCompleted = highWeightageChapters.filter((c) => c.isCompleted).length;
   const highProgress = highWeightageChapters.length > 0
     ? Math.round((highCompleted / highWeightageChapters.length) * 100)
     : 0;
 
   // Class 11 vs 12
-  const c11 = chapters.filter((c) => c.classGrade === 'Class 11');
+  const c11 = filteredChapters.filter((c) => c.classGrade === 'Class 11');
   const c11Done = c11.filter((c) => c.isCompleted).length;
   const c11Pct = c11.length > 0 ? Math.round((c11Done / c11.length) * 100) : 0;
 
-  const c12 = chapters.filter((c) => c.classGrade === 'Class 12');
+  const c12 = filteredChapters.filter((c) => c.classGrade === 'Class 12');
   const c12Done = c12.filter((c) => c.isCompleted).length;
   const c12Pct = c12.length > 0 ? Math.round((c12Done / c12.length) * 100) : 0;
 
@@ -76,6 +88,49 @@ export const TrackerScreen: React.FC = () => {
         <p className="text-xs sm:text-sm text-slate-400 mt-1">
           Real-time countdown to JEE Main Session 1 and JEE Advanced, alongside high-yield chapter velocity.
         </p>
+      </div>
+
+      {/* Interactive Filters */}
+      <div className="flex flex-col sm:flex-row gap-3 p-4 rounded-3xl bg-[#121A27] border border-slate-800">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <Filter className="w-4 h-4 text-slate-400" />
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Class:</span>
+          {['All', 'Class 11', 'Class 12'].map((cls) => (
+            <button
+              key={cls}
+              onClick={() => setFilterClass(cls as any)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${
+                filterClass === cls
+                  ? 'bg-slate-700 text-white'
+                  : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-300 border border-slate-800'
+              }`}
+            >
+              {cls}
+            </button>
+          ))}
+        </div>
+        
+        <div className="hidden sm:block w-px bg-slate-800" />
+        
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Subject:</span>
+          {['All', 'Physics', 'Chemistry', 'Mathematics'].map((sub) => (
+            <button
+              key={sub}
+              onClick={() => setFilterSubject(sub as any)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${
+                filterSubject === sub
+                  ? sub === 'Physics' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                    : sub === 'Chemistry' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    : sub === 'Mathematics' ? 'bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/30'
+                    : 'bg-slate-700 text-white border border-slate-600'
+                  : 'bg-slate-900 text-slate-400 hover:bg-slate-800 border border-slate-800'
+              }`}
+            >
+              {sub}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Countdown Cards */}
@@ -146,40 +201,44 @@ export const TrackerScreen: React.FC = () => {
       {/* Class 11 vs Class 12 Split */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Class 11 */}
-        <div className="p-5 rounded-2xl bg-[#121A27] border border-slate-800 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Layers className="w-5 h-5 text-cyan-400" />
-              <h3 className="font-bold text-white text-sm">Class 11 Foundation Mastery</h3>
+        {(filterClass === 'All' || filterClass === 'Class 11') && (
+          <div className="p-5 rounded-2xl bg-[#121A27] border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Layers className="w-5 h-5 text-cyan-400" />
+                <h3 className="font-bold text-white text-sm">Class 11 Foundation Mastery</h3>
+              </div>
+              <span className="font-mono font-bold text-cyan-400 text-sm">{c11Pct}%</span>
             </div>
-            <span className="font-mono font-bold text-cyan-400 text-sm">{c11Pct}%</span>
+            <div className="w-full h-2.5 rounded-full bg-slate-800 overflow-hidden">
+              <div className="h-full bg-cyan-500 rounded-full transition-all duration-500" style={{ width: `${c11Pct}%` }} />
+            </div>
+            <div className="flex justify-between text-xs text-slate-400">
+              <span>{c11Done} of {c11.length} Chapters Mastered</span>
+              <span>{c11.length - c11Done} Pending</span>
+            </div>
           </div>
-          <div className="w-full h-2.5 rounded-full bg-slate-800 overflow-hidden">
-            <div className="h-full bg-cyan-500 rounded-full transition-all duration-500" style={{ width: `${c11Pct}%` }} />
-          </div>
-          <div className="flex justify-between text-xs text-slate-400">
-            <span>{c11Done} of {c11.length} Chapters Mastered</span>
-            <span>{c11.length - c11Done} Pending</span>
-          </div>
-        </div>
+        )}
 
         {/* Class 12 */}
-        <div className="p-5 rounded-2xl bg-[#121A27] border border-slate-800 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Layers className="w-5 h-5 text-purple-400" />
-              <h3 className="font-bold text-white text-sm">Class 12 Boards & Advanced</h3>
+        {(filterClass === 'All' || filterClass === 'Class 12') && (
+          <div className="p-5 rounded-2xl bg-[#121A27] border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Layers className="w-5 h-5 text-purple-400" />
+                <h3 className="font-bold text-white text-sm">Class 12 Boards & Advanced</h3>
+              </div>
+              <span className="font-mono font-bold text-purple-400 text-sm">{c12Pct}%</span>
             </div>
-            <span className="font-mono font-bold text-purple-400 text-sm">{c12Pct}%</span>
+            <div className="w-full h-2.5 rounded-full bg-slate-800 overflow-hidden">
+              <div className="h-full bg-purple-500 rounded-full transition-all duration-500" style={{ width: `${c12Pct}%` }} />
+            </div>
+            <div className="flex justify-between text-xs text-slate-400">
+              <span>{c12Done} of {c12.length} Chapters Mastered</span>
+              <span>{c12.length - c12Done} Pending</span>
+            </div>
           </div>
-          <div className="w-full h-2.5 rounded-full bg-slate-800 overflow-hidden">
-            <div className="h-full bg-purple-500 rounded-full transition-all duration-500" style={{ width: `${c12Pct}%` }} />
-          </div>
-          <div className="flex justify-between text-xs text-slate-400">
-            <span>{c12Done} of {c12.length} Chapters Mastered</span>
-            <span>{c12.length - c12Done} Pending</span>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* High-Weightage Chapters Mastery Checklist */}
