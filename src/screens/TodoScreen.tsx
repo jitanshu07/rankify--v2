@@ -59,7 +59,7 @@ export const TodoScreen: React.FC = () => {
   const completionPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
-    <div className="space-y-6 pb-16 animate-in fade-in">
+    <div className="space-y-6 pb-16 animate-in fade-in overscroll-contain">
       {/* Penalty Alert Banner if penalty occurred */}
       {profile.lastPenaltyReason && (
         <div className="p-4 rounded-2xl bg-rose-950/40 border border-rose-500/50 flex items-start justify-between gap-3 text-rose-200 text-xs animate-in fade-in shadow-lg">
@@ -358,8 +358,8 @@ export const TodoScreen: React.FC = () => {
 
       {/* Routine Templates Modal */}
       {showTemplateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-          <div className="relative w-full max-w-2xl rounded-3xl bg-[#121A27] border border-slate-700 p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in overscroll-contain">
+          <div className="relative w-full max-w-2xl rounded-3xl bg-[#121A27] border border-slate-700 p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto overscroll-contain">
             <button
               onClick={() => setShowTemplateModal(false)}
               className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white transition"

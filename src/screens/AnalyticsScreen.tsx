@@ -64,7 +64,7 @@ export const AnalyticsScreen: React.FC = () => {
   const todoPct = todos.length > 0 ? Math.round((completedTodos / todos.length) * 100) : 0;
 
   return (
-    <div className="space-y-6 pb-16 animate-in fade-in">
+    <div className="space-y-6 pb-16 animate-in fade-in overscroll-contain">
       {/* Header Banner */}
       <div className="p-5 rounded-3xl bg-gradient-to-r from-cyan-950/40 via-[#121A27] to-slate-900 border border-slate-800">
         <h1 className="text-2xl font-black text-white flex items-center gap-2.5">

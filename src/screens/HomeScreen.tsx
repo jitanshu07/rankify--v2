@@ -87,10 +87,10 @@ export const HomeScreen: React.FC = () => {
   const pendingTodos = todos.filter((t) => !t.isCompleted).slice(0, 4);
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in">
+    <div className="space-y-6 pb-12 animate-in fade-in overscroll-contain">
       {/* Onboarding Welcome Banner for Jitanshu if not onboarded yet */}
       {!profile.isOnboarded && (
-        <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-cyan-950/70 via-[#121E30] to-blue-950/60 border border-cyan-500/50 shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in">
+        <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-cyan-950/70 via-[#121E30] to-blue-950/60 border border-cyan-500/50 shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in overscroll-contain">
           <div className="flex items-center gap-3.5">
             <div className="w-11 h-11 rounded-2xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-black flex-shrink-0 shadow-lg shadow-cyan-500/10">
               <Target className="w-6 h-6" />

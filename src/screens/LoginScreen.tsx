@@ -198,7 +198,7 @@ export const LoginScreen: React.FC = () => {
   const completedChaptersCount = chapters.filter(c => c.isCompleted).length;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-16 animate-in fade-in">
+    <div className="max-w-4xl mx-auto space-y-8 pb-16 animate-in fade-in overscroll-contain">
       {/* Header Banner */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0D1525] via-[#101A2C] to-[#0A101C] border border-slate-800 p-6 sm:p-8 shadow-2xl">
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
@@ -774,7 +774,7 @@ export const LoginScreen: React.FC = () => {
 
       {/* Modal for Google Account input */}
       {showGoogleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in overscroll-contain">
           <div className="relative w-full max-w-md rounded-3xl bg-[#121A27] border border-slate-700 p-6 shadow-2xl space-y-5">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow">

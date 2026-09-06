@@ -50,7 +50,7 @@ export const SyllabusScreen: React.FC = () => {
   const filterProgress = totalFiltered > 0 ? Math.round((completedFiltered / totalFiltered) * 100) : 0;
 
   return (
-    <div className="space-y-6 pb-16 animate-in fade-in">
+    <div className="space-y-6 pb-16 animate-in fade-in overscroll-contain">
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 rounded-3xl bg-gradient-to-r from-cyan-950/40 via-[#121A27] to-slate-900 border border-slate-800">
         <div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
   Timer as TimerIcon, 
@@ -12,8 +12,11 @@ import {
   Volume2, 
   Trash2,
   X,
-  Settings
+  Settings,
+  ShieldCheck,
+  BarChart3
 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 type TimerMode = 'pomodoro' | 'stopwatch';
 type PomodoroPhase = 'work' | 'shortBreak' | 'longBreak';
@@ -47,6 +50,38 @@ export const TimerScreen: React.FC = () => {
   const [sessionCategory, setSessionCategory] = useState('Problem Practice');
   const [sessionNotes, setSessionNotes] = useState('');
   const [lastCompletedDuration, setLastCompletedDuration] = useState(0);
+
+  // Deep Work Mode state
+  const [isDeepWorkEnabled, setIsDeepWorkEnabled] = useState(false);
+  const [showDeepWorkChecklist, setShowDeepWorkChecklist] = useState(false);
+
+  // Calculate Last 7 Days Data
+  const last7DaysData = useMemo(() => {
+    const data = [];
+    const now = new Date();
+    
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+      
+      const totalSeconds = sessions
+        .filter(s => {
+          // Compare YYYY-MM-DD
+          const sessionDateStr = new Date(s.timestamp).toISOString().split('T')[0];
+          return sessionDateStr === dateStr;
+        })
+        .reduce((sum, s) => sum + s.durationSeconds, 0);
+        
+      data.push({
+        name: dayName,
+        hours: Number((totalSeconds / 3600).toFixed(1)),
+        dateStr
+      });
+    }
+    return data;
+  }, [sessions]);
 
   // Web Audio Synth chime
   const playChime = () => {
@@ -189,6 +224,20 @@ export const TimerScreen: React.FC = () => {
     }
   };
 
+  const handleToggleTimer = () => {
+    if (!isRunning && isDeepWorkEnabled) {
+      const isStartOfBlock = mode === 'pomodoro' 
+        ? (currentPhase === 'work' && secondsRemaining === workDurationMins * 60)
+        : (stopwatchSeconds === 0);
+
+      if (isStartOfBlock) {
+        setShowDeepWorkChecklist(true);
+        return;
+      }
+    }
+    setIsRunning(!isRunning);
+  };
+
   // Format MM:SS or HH:MM:SS
   const formatTime = (totalSec: number) => {
     const hrs = Math.floor(totalSec / 3600);
@@ -211,7 +260,7 @@ export const TimerScreen: React.FC = () => {
   const strokeDashoffset = 754 - 754 * progressRatio;
 
   return (
-    <div className="space-y-6 pb-16 animate-in fade-in">
+    <div className="space-y-6 pb-16 animate-in fade-in overscroll-contain">
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 rounded-3xl bg-gradient-to-r from-cyan-950/40 via-[#121A27] to-slate-900 border border-slate-800">
         <div>
@@ -224,34 +273,54 @@ export const TimerScreen: React.FC = () => {
           </p>
         </div>
 
-        {/* Mode Selector */}
-        <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-900/90 border border-slate-800 w-fit">
-          <button
-            onClick={() => {
-              setIsRunning(false);
-              setMode('pomodoro');
-            }}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-              mode === 'pomodoro'
-                ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Pomodoro Mode
-          </button>
-          <button
-            onClick={() => {
-              setIsRunning(false);
-              setMode('stopwatch');
-            }}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-              mode === 'stopwatch'
-                ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Stopwatch Count-Up
-          </button>
+        {/* Controls Container */}
+        <div className="flex flex-col items-start sm:items-end gap-3">
+          {/* Mode Selector */}
+          <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-900/90 border border-slate-800 w-fit">
+            <button
+              onClick={() => {
+                setIsRunning(false);
+                setMode('pomodoro');
+              }}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                mode === 'pomodoro'
+                  ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Pomodoro Mode
+            </button>
+            <button
+              onClick={() => {
+                setIsRunning(false);
+                setMode('stopwatch');
+              }}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                mode === 'stopwatch'
+                  ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Stopwatch Count-Up
+            </button>
+          </div>
+
+          {/* Deep Work Toggle */}
+          <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-[#121A27] border border-slate-800 w-fit shadow-inner">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Deep Work</span>
+            <button
+              onClick={() => setIsDeepWorkEnabled(!isDeepWorkEnabled)}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${
+                isDeepWorkEnabled ? 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.6)]' : 'bg-slate-700'
+              }`}
+            >
+              <span
+                className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                  isDeepWorkEnabled ? 'translate-x-4' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -325,7 +394,13 @@ export const TimerScreen: React.FC = () => {
 
           {/* Time text centered */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className="text-5xl sm:text-6xl font-black font-mono tracking-tight text-white drop-shadow-md">
+            <div 
+              className={`text-5xl sm:text-6xl font-black font-mono tracking-tight drop-shadow-md transition-colors duration-500 ${
+                isRunning 
+                  ? `animate-pulse ${mode === 'pomodoro' && currentPhase !== 'work' ? 'text-emerald-400' : 'text-cyan-400'}`
+                  : 'text-white'
+              }`}
+            >
               {formatTime(mode === 'pomodoro' ? secondsRemaining : stopwatchSeconds)}
             </div>
             <span className="text-xs text-slate-400 uppercase tracking-widest mt-2 font-semibold">
@@ -345,7 +420,7 @@ export const TimerScreen: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setIsRunning(!isRunning)}
+            onClick={handleToggleTimer}
             className={`px-8 py-3.5 rounded-2xl font-bold text-base flex items-center gap-2 transition cursor-pointer shadow-xl ${
               isRunning
                 ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20'
@@ -422,6 +497,43 @@ export const TimerScreen: React.FC = () => {
         )}
       </div>
 
+      {/* Activity Chart */}
+      <div className="p-5 rounded-3xl bg-[#121A27] border border-slate-800 space-y-4">
+        <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-cyan-400" />
+          Activity (Past 7 Days)
+        </h2>
+        <div className="h-44 w-full pt-2">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={last7DaysData} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
+              <XAxis 
+                dataKey="name" 
+                tick={{ fontSize: 11, fill: '#64748b' }} 
+                axisLine={false} 
+                tickLine={false} 
+              />
+              <YAxis 
+                tick={{ fontSize: 11, fill: '#64748b' }} 
+                axisLine={false} 
+                tickLine={false} 
+              />
+              <Tooltip 
+                cursor={{ fill: '#1e293b' }}
+                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '12px', color: '#f8fafc' }}
+                itemStyle={{ color: '#06b6d4', fontWeight: 'bold' }}
+                formatter={(value: number) => [`${value} hrs`, 'Study Time']}
+                labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
+              />
+              <Bar dataKey="hours" radius={[6, 6, 0, 0]} maxBarSize={40}>
+                {last7DaysData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.hours > 0 ? '#06b6d4' : '#1e293b'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {/* Study Session History */}
       <div className="p-5 rounded-3xl bg-[#121A27] border border-slate-800 space-y-4">
         <div className="flex items-center justify-between">
@@ -476,7 +588,7 @@ export const TimerScreen: React.FC = () => {
 
       {/* Interval Settings Modal */}
       {showSettings && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in overscroll-contain">
           <div className="relative w-full max-w-md rounded-3xl bg-[#121A27] border border-slate-700 p-6 shadow-2xl space-y-4">
             <button
               onClick={() => setShowSettings(false)}
@@ -558,7 +670,7 @@ export const TimerScreen: React.FC = () => {
 
       {/* Log Session Modal */}
       {showLogModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in overscroll-contain">
           <div className="relative w-full max-w-md rounded-3xl bg-[#121A27] border border-slate-700 p-6 shadow-2xl space-y-4">
             <button
               onClick={() => setShowLogModal(false)}
@@ -634,6 +746,58 @@ export const TimerScreen: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Deep Work Checklist Modal */}
+      {showDeepWorkChecklist && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in overscroll-contain">
+          <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto overscroll-contain rounded-3xl bg-[#121A27] border border-cyan-500/30 p-6 sm:p-8 shadow-2xl shadow-cyan-900/20 space-y-6">
+            <button
+              onClick={() => setShowDeepWorkChecklist(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="text-center space-y-2">
+              <div className="w-16 h-16 rounded-full bg-cyan-500/20 border border-cyan-500/50 flex items-center justify-center mx-auto mb-4">
+                <ShieldCheck className="w-8 h-8 text-cyan-400" />
+              </div>
+              <h3 className="text-2xl font-bold text-white">Enter Deep Work</h3>
+              <p className="text-sm text-slate-400">
+                Confirm your environment is optimized for maximum focus before starting.
+              </p>
+            </div>
+
+            <div className="space-y-3 bg-slate-900/50 p-4 rounded-2xl border border-slate-800">
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <input type="checkbox" className="mt-1 w-4 h-4 rounded border-slate-600 text-cyan-500 focus:ring-cyan-500 bg-slate-800" />
+                <span className="text-sm text-slate-300 group-hover:text-white transition">Phone is placed out of sight or on Do Not Disturb.</span>
+              </label>
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <input type="checkbox" className="mt-1 w-4 h-4 rounded border-slate-600 text-cyan-500 focus:ring-cyan-500 bg-slate-800" />
+                <span className="text-sm text-slate-300 group-hover:text-white transition">Hydration (water bottle) is ready and nearby.</span>
+              </label>
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <input type="checkbox" className="mt-1 w-4 h-4 rounded border-slate-600 text-cyan-500 focus:ring-cyan-500 bg-slate-800" />
+                <span className="text-sm text-slate-300 group-hover:text-white transition">All distracting tabs and applications are closed.</span>
+              </label>
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <input type="checkbox" className="mt-1 w-4 h-4 rounded border-slate-600 text-cyan-500 focus:ring-cyan-500 bg-slate-800" />
+                <span className="text-sm text-slate-300 group-hover:text-white transition">A single, clear goal is set for this session.</span>
+              </label>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowDeepWorkChecklist(false);
+                setIsRunning(true);
+              }}
+              className="w-full py-4 rounded-xl font-bold text-slate-950 bg-gradient-to-r from-cyan-400 to-blue-500 hover:opacity-90 transition cursor-pointer shadow-lg shadow-cyan-500/25"
+            >
+              I am Ready. Start Session.
+            </button>
           </div>
         </div>
       )}

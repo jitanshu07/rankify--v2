@@ -139,7 +139,7 @@ export const DailyCheckInCard: React.FC = () => {
 
   // State 2: Not Checked In Yet Today
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#161726] via-[#101421] to-[#0F1723] border border-amber-500/50 p-5 sm:p-6 shadow-2xl shadow-amber-950/20 animate-in fade-in">
+    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#161726] via-[#101421] to-[#0F1723] border border-amber-500/50 p-5 sm:p-6 shadow-2xl shadow-amber-950/20 animate-in fade-in overscroll-contain">
       <div className="absolute top-0 right-0 -mt-10 -mr-10 w-44 h-44 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

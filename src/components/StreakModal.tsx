@@ -20,8 +20,8 @@ export const StreakModal: React.FC<StreakModalProps> = ({ isOpen, onClose }) => 
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
-      <div className="relative w-full max-w-md rounded-3xl bg-[#121A27] border border-slate-700/80 p-6 shadow-2xl space-y-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in overscroll-contain">
+      <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto overscroll-contain rounded-3xl bg-[#121A27] border border-slate-700/80 p-6 shadow-2xl space-y-5">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer"

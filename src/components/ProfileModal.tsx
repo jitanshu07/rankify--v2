@@ -95,9 +95,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in overscroll-contain">
       <div 
-        className="relative w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-3xl bg-[#101724] border border-slate-700/90 shadow-2xl p-5 sm:p-7 space-y-6 text-slate-100"
+        className="relative w-full max-w-xl max-h-[92vh] overflow-y-auto overscroll-contain rounded-3xl bg-[#101724] border border-slate-700/90 shadow-2xl p-5 sm:p-7 space-y-6 text-slate-100"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}

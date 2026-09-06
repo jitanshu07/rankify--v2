@@ -325,7 +325,7 @@ export const AIMentorScreen: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-16 animate-in fade-in">
+    <div className="space-y-6 pb-16 animate-in fade-in overscroll-contain">
       {/* Top Banner */}
       <div className="p-5 rounded-3xl bg-gradient-to-r from-cyan-950/50 via-[#121A27] to-blue-950/40 border border-cyan-500/30 shadow-xl">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -466,7 +466,7 @@ export const AIMentorScreen: React.FC = () => {
 
           {/* Conversation History Container */}
           <div className="rounded-3xl bg-[#121A27] border border-slate-800 shadow-xl overflow-hidden flex flex-col min-h-[460px] max-h-[640px]">
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
               {doubtHistory.map((msg) => {
                 const isUser = msg.role === 'user';
 
@@ -1103,7 +1103,7 @@ export const AIMentorScreen: React.FC = () => {
       {/* GEMINI SETTINGS MODAL */}
       {/* ========================================================= */}
       {showSettingsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in overscroll-contain">
           <div className="relative w-full max-w-lg rounded-3xl bg-[#121A27] border border-slate-700 p-6 shadow-2xl space-y-5">
             <button
               onClick={() => setShowSettingsModal(false)}

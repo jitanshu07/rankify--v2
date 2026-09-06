@@ -71,7 +71,7 @@ export const FormulasScreen: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-16 animate-in fade-in">
+    <div className="space-y-6 pb-16 animate-in fade-in overscroll-contain">
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 rounded-3xl bg-gradient-to-r from-blue-950/40 via-[#121A27] to-slate-900 border border-slate-800">
         <div>
@@ -220,7 +220,7 @@ export const FormulasScreen: React.FC = () => {
 
       {/* Add Formula Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in overscroll-contain">
           <div className="relative w-full max-w-lg rounded-3xl bg-[#121A27] border border-slate-700 p-6 shadow-2xl space-y-4">
             <button
               onClick={() => setIsModalOpen(false)}
