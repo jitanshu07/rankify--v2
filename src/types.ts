@@ -66,6 +66,9 @@ export interface BacklogItem {
   targetDate: string;
   urgency: 'Critical' | 'High' | 'Medium';
   isCompleted: boolean;
+  lectureFrom?: number;
+  lectureTo?: number;
+  completedLectures?: number[];
 }
 
 export interface UserProfile {

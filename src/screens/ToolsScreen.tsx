@@ -28,6 +28,7 @@ export const ToolsScreen: React.FC = () => {
     backlogs,
     addBacklog,
     toggleBacklog,
+    toggleBacklogLecture,
     deleteBacklog
   } = useApp();
 
@@ -48,6 +49,8 @@ export const ToolsScreen: React.FC = () => {
   const [blSubject, setBlSubject] = useState('Physics');
   const [blDate, setBlDate] = useState('By this weekend');
   const [blUrgency, setBlUrgency] = useState<'Critical' | 'High' | 'Medium'>('Critical');
+  const [blLectureFrom, setBlLectureFrom] = useState<number>(1);
+  const [blLectureTo, setBlLectureTo] = useState<number>(1);
 
   // Rank Predictor state
   const [physMarks, setPhysMarks] = useState<number>(75);
@@ -121,7 +124,7 @@ export const ToolsScreen: React.FC = () => {
   const handleAddBacklogSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!blTitle.trim()) return;
-    addBacklog(blTitle.trim(), blSubject, blDate.trim(), blUrgency);
+    addBacklog(blTitle.trim(), blSubject, blDate.trim(), blUrgency, blLectureFrom, blLectureTo);
     setBlTitle('');
     setShowBacklogModal(false);
   };
@@ -368,15 +371,8 @@ export const ToolsScreen: React.FC = () => {
                     </button>
 
                     <div className="min-w-0 flex-1">
-                      <h4
-                        className={`text-xs sm:text-sm font-semibold truncate ${
-                          item.isCompleted ? 'line-through text-slate-400' : 'text-white'
-                        }`}
-                      >
-                        {item.title}
-                      </h4>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300">
+                      <div className="flex items-center flex-wrap gap-2 mb-1.5">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300">
                           {item.subject}
                         </span>
                         <span
@@ -390,10 +386,47 @@ export const ToolsScreen: React.FC = () => {
                         >
                           {item.urgency} Urgency
                         </span>
-                        <span className="text-[10px] text-slate-400">
+                        <span className="text-[10px] font-medium text-slate-400 bg-slate-900/50 px-2 py-0.5 rounded-md border border-slate-800/50">
                           Deadline: {item.targetDate}
                         </span>
                       </div>
+                      <h4
+                        className={`text-xs sm:text-sm font-semibold truncate ${
+                          item.isCompleted ? 'line-through text-slate-400' : 'text-white'
+                        }`}
+                      >
+                        {item.title}
+                      </h4>
+
+                      {/* Lecture Track */}
+                      {item.lectureTo && item.lectureTo > 0 ? (
+                        <div className="flex flex-wrap gap-1.5 mt-3">
+                          {Array.from({ length: item.lectureTo }, (_, i) => i + 1).map(num => {
+                            const isBeforeTargetRange = item.lectureFrom && num < item.lectureFrom;
+                            const isCompleted = isBeforeTargetRange || (item.completedLectures || []).includes(num);
+                            
+                            return (
+                              <button
+                                key={num}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (!isBeforeTargetRange) {
+                                    toggleBacklogLecture(item.id, num);
+                                  }
+                                }}
+                                disabled={!!isBeforeTargetRange}
+                                className={`w-7 h-7 flex items-center justify-center text-[10px] font-bold rounded-md shadow-sm transition-all ${
+                                  isCompleted
+                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                    : 'bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/40 cursor-pointer'
+                                }`}
+                              >
+                                {num}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
 
@@ -725,6 +758,33 @@ export const ToolsScreen: React.FC = () => {
                     <option value="Critical">Critical Priority</option>
                     <option value="High">High</option>
                     <option value="Medium">Medium</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Lecture From</label>
+                  <select
+                    value={blLectureFrom}
+                    onChange={(e) => setBlLectureFrom(Number(e.target.value))}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white focus:outline-none focus:border-amber-500"
+                  >
+                    {Array.from({ length: 30 }, (_, i) => i + 1).map(num => (
+                      <option key={num} value={num}>Lecture {num}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Lecture To</label>
+                  <select
+                    value={blLectureTo}
+                    onChange={(e) => setBlLectureTo(Number(e.target.value))}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white focus:outline-none focus:border-amber-500"
+                  >
+                    {Array.from({ length: 30 }, (_, i) => i + 1).map(num => (
+                      <option key={num} value={num}>Lecture {num}</option>
+                    ))}
                   </select>
                 </div>
               </div>

@@ -78,8 +78,9 @@ interface AppContextType {
   
   // Backlogs
   backlogs: BacklogItem[];
-  addBacklog: (title: string, subject: string, targetDate: string, urgency: 'Critical' | 'High' | 'Medium') => void;
+  addBacklog: (title: string, subject: string, targetDate: string, urgency: 'Critical' | 'High' | 'Medium', lectureFrom?: number, lectureTo?: number) => void;
   toggleBacklog: (id: string) => void;
+  toggleBacklogLecture: (id: string, lectureNum: number) => void;
   deleteBacklog: (id: string) => void;
   
   // Error Book
@@ -854,20 +855,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Backlogs
-  const addBacklog = (title: string, subject: string, targetDate: string, urgency: 'Critical' | 'High' | 'Medium') => {
+  const addBacklog = (title: string, subject: string, targetDate: string, urgency: 'Critical' | 'High' | 'Medium', lectureFrom?: number, lectureTo?: number) => {
     const newBacklog: BacklogItem = {
       id: 'b_' + Date.now(),
       title,
       subject,
       targetDate,
       urgency,
-      isCompleted: false
+      isCompleted: false,
+      lectureFrom,
+      lectureTo,
+      completedLectures: []
     };
     setBacklogs(prev => [newBacklog, ...prev]);
   };
 
   const toggleBacklog = (id: string) => {
     setBacklogs(prev => prev.map(b => b.id === id ? { ...b, isCompleted: !b.isCompleted } : b));
+  };
+
+  const toggleBacklogLecture = (id: string, lectureNum: number) => {
+    setBacklogs(prev => {
+      const target = prev.find(b => b.id === id);
+      if (!target) return prev;
+      
+      const completed = target.completedLectures || [];
+      const isCurrentlyCompleted = completed.includes(lectureNum);
+      const newCompleted = isCurrentlyCompleted
+        ? completed.filter(num => num !== lectureNum)
+        : [...completed, lectureNum];
+
+      // EXP logic
+      setProfile(p => {
+        const expDelta = isCurrentlyCompleted ? -5 : 5;
+        const nextExp = Math.max(0, (p.exp || 0) + expDelta);
+        return { ...p, exp: nextExp };
+      });
+
+      // Update streak if newly completed
+      if (!isCurrentlyCompleted) {
+        const today = new Date().toISOString().split('T')[0];
+        setProfile(prevProfile => recordDailyActivity(prevProfile, today));
+      }
+
+      return prev.map(b => 
+        b.id === id ? { ...b, completedLectures: newCompleted } : b
+      );
+    });
   };
 
   const deleteBacklog = (id: string) => {
