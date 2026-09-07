@@ -63,6 +63,7 @@ interface AppContextType {
   addMultipleTodos: (items: { title: string; subject: string; priority: PriorityType }[]) => void;
   toggleTodo: (id: string) => void;
   deleteTodo: (id: string) => void;
+  editTodo: (id: string, title: string, subject: string, priority: PriorityType) => void;
   clearCompletedTodos: (dateToClear?: string) => void;
   applyRoutineTemplate: (template: RoutineTemplate) => void;
   
@@ -760,6 +761,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const editTodo = (id: string, title: string, subject: string, priority: PriorityType) => {
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, title, subject, priority } : t));
+  };
+
   const deleteTodo = (id: string) => {
     setTodos(prev => prev.filter(t => t.id !== id));
   };
@@ -1124,6 +1129,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addMultipleTodos,
         toggleTodo,
         deleteTodo,
+        editTodo,
         clearCompletedTodos,
         applyRoutineTemplate,
         formulas,
