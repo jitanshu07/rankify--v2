@@ -14,6 +14,13 @@ export const ClassScheduleCard: React.FC = () => {
     return localStorage.getItem('class_schedule_slot2') || '06:15 pm - 08:00 pm';
   });
 
+  const [dateFrom, setDateFrom] = useState<string>(() => {
+    return localStorage.getItem('class_schedule_date_from') || '';
+  });
+  const [dateTo, setDateTo] = useState<string>(() => {
+    return localStorage.getItem('class_schedule_date_to') || '';
+  });
+
   const [schedule, setSchedule] = useState<Record<string, Record<string, string>>>(() => {
     const saved = localStorage.getItem('class_schedule_v2');
     if (saved) {
@@ -23,6 +30,23 @@ export const ClassScheduleCard: React.FC = () => {
     }
     return {};
   });
+
+  useEffect(() => {
+    if (dateTo) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const toDate = new Date(dateTo);
+      toDate.setHours(0, 0, 0, 0);
+      
+      if (today > toDate) {
+        setSchedule({});
+        setTimeSlot1('');
+        setTimeSlot2('');
+        setDateFrom('');
+        setDateTo('');
+      }
+    }
+  }, [dateTo]);
 
   useEffect(() => {
     localStorage.setItem('class_schedule_v2', JSON.stringify(schedule));
@@ -36,6 +60,14 @@ export const ClassScheduleCard: React.FC = () => {
     localStorage.setItem('class_schedule_slot2', timeSlot2);
   }, [timeSlot2]);
 
+  useEffect(() => {
+    localStorage.setItem('class_schedule_date_from', dateFrom);
+  }, [dateFrom]);
+
+  useEffect(() => {
+    localStorage.setItem('class_schedule_date_to', dateTo);
+  }, [dateTo]);
+
   const updateCell = (day: string, slotId: string, subject: string) => {
     setSchedule(prev => ({
       ...prev,
@@ -48,14 +80,34 @@ export const ClassScheduleCard: React.FC = () => {
 
   return (
     <div className="rounded-3xl bg-[#121A27] border border-slate-800 p-4 sm:p-5 shadow-xl my-4 overflow-hidden">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400">
-            <Calendar className="w-5 h-5" />
+      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 mb-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white leading-tight">Arjuna JEE</h2>
+              <p className="text-xs text-slate-400">Weekly Class Routine</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-white leading-tight">Arjuna JEE</h2>
-            <p className="text-xs text-slate-400">Weekly Class Routine</p>
+          
+          <div className="hidden sm:block w-px h-8 bg-slate-800 mx-2" />
+
+          <div className="flex items-center gap-2">
+            <input 
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs font-semibold text-white focus:outline-none focus:border-amber-500 transition cursor-pointer"
+            />
+            <span className="text-slate-500 text-xs font-semibold">to</span>
+            <input 
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs font-semibold text-white focus:outline-none focus:border-amber-500 transition cursor-pointer"
+            />
           </div>
         </div>
         
