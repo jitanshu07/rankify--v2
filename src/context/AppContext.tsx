@@ -63,7 +63,7 @@ interface AppContextType {
   addMultipleTodos: (items: { title: string; subject: string; priority: PriorityType }[]) => void;
   toggleTodo: (id: string) => void;
   deleteTodo: (id: string) => void;
-  clearCompletedTodos: () => void;
+  clearCompletedTodos: (dateToClear?: string) => void;
   applyRoutineTemplate: (template: RoutineTemplate) => void;
   
   // Formulas
@@ -138,10 +138,10 @@ const createDefaultProfile = (name?: string, targetExam?: string, targetYear?: n
   currentStreak: 0,
   bestStreak: 0,
   streakGoalTarget: 3,
-  lastActiveDate: new Date().toISOString().split('T')[0],
+  lastActiveDate: getLogicalDate(),
   isOnboarded: false,
   exp: 0,
-  lastCheckedDate: new Date().toISOString().split('T')[0],
+  lastCheckedDate: getLogicalDate(),
   lastPenaltyReason: '',
 });
 
@@ -268,6 +268,14 @@ const loadUserScopedData = (
     errors: loadedErrors,
     chapters: loadedChapters,
   };
+};
+
+export const getLogicalDate = (): string => {
+  const d = new Date();
+  if (d.getHours() < 4) {
+    d.setDate(d.getDate() - 1);
+  }
+  return d.toISOString().split('T')[0];
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -638,7 +646,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const todayDateStr = new Date().toISOString().split('T')[0];
+  const todayDateStr = getLogicalDate();
   const todaysCheckIn = checkIns.find(c => c.date === todayDateStr);
 
   const openCheckInModal = () => setIsCheckInModalOpen(true);
@@ -717,13 +725,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       subject,
       priority,
       isCompleted: false,
-      dateCreated: new Date().toISOString().split('T')[0]
+      dateCreated: getLogicalDate()
     };
     setTodos(prev => [newTodo, ...prev]);
   };
 
   const addMultipleTodos = (items: { title: string; subject: string; priority: PriorityType }[]) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLogicalDate();
     const newItems: TodoItem[] = items.map((item, idx) => ({
       id: 't_ai_' + Date.now() + '_' + idx,
       title: item.title,
@@ -756,12 +764,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTodos(prev => prev.filter(t => t.id !== id));
   };
 
-  const clearCompletedTodos = () => {
-    setTodos(prev => prev.filter(t => !t.isCompleted));
+  const clearCompletedTodos = (dateToClear?: string) => {
+    setTodos(prev => prev.filter(t => {
+      if (dateToClear) {
+        return !(t.isCompleted && t.dateCreated === dateToClear);
+      }
+      return !t.isCompleted;
+    }));
   };
 
   const applyRoutineTemplate = (template: RoutineTemplate) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLogicalDate();
     const newTodos: TodoItem[] = template.tasks.map((task, idx) => ({
       id: 'template_' + Date.now() + '_' + idx,
       title: task.title,
@@ -791,7 +804,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return prev;
     }
 
-    const yesterday = new Date();
+    const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
 
@@ -822,7 +835,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSessions(prev => [newSession, ...prev]);
 
     // Update streak if active today
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLogicalDate();
     setProfile(prev => recordDailyActivity(prev, today));
   };
 
@@ -832,7 +845,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Daily Check-In
   const submitDailyCheckIn = (data: Omit<DailyCheckIn, 'id' | 'date' | 'timestamp'>) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLogicalDate();
     const now = Date.now();
     
     const newCheckIn: DailyCheckIn = {
@@ -895,7 +908,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Update streak if newly completed
       if (!isCurrentlyCompleted) {
-        const today = new Date().toISOString().split('T')[0];
+        const today = getLogicalDate();
         setProfile(prevProfile => recordDailyActivity(prevProfile, today));
       }
 
@@ -919,7 +932,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...errorData,
       id: 'e_' + Date.now(),
       isResolved: false,
-      dateAdded: new Date().toISOString().split('T')[0]
+      dateAdded: getLogicalDate()
     };
     setErrors(prev => [newError, ...prev]);
   };
@@ -937,7 +950,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Runs robustly in a background interval so it triggers even if tab is minimized
   useEffect(() => {
     const checkDayChanged = () => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getLogicalDate();
       setProfile(prev => {
         const lastCheck = prev.lastCheckedDate;
         if (!lastCheck) {

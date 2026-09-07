@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, getLogicalDate } from '../context/AppContext';
 import { 
   CheckSquare, 
   Plus, 
@@ -14,7 +14,8 @@ import {
   CheckCircle2,
   Zap,
   ShieldCheck,
-  AlertTriangle
+  AlertTriangle,
+  Calendar
 } from 'lucide-react';
 import { PriorityType, RoutineTemplate } from '../types';
 import { ROUTINE_TEMPLATES } from '../data/initialData';
@@ -38,6 +39,12 @@ export const TodoScreen: React.FC = () => {
   const [subject, setSubject] = useState('Physics');
   const [priority, setPriority] = useState<PriorityType>('High');
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [historyDate, setHistoryDate] = useState<string>(getLogicalDate());
+
+  const availableDates = Array.from(new Set(todos.map(t => t.dateCreated))).sort((a, b) => b.localeCompare(a));
+  if (!availableDates.includes(getLogicalDate())) {
+    availableDates.unshift(getLogicalDate());
+  }
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [auditResult, setAuditResult] = useState<{ penalized: boolean; message: string } | null>(null);
 
@@ -48,14 +55,16 @@ export const TodoScreen: React.FC = () => {
     setTitle('');
   };
 
-  const filteredTodos = todos.filter((t) => {
+  const dateFilteredTodos = todos.filter(t => t.dateCreated === historyDate);
+
+  const filteredTodos = dateFilteredTodos.filter((t) => {
     if (filter === 'active') return !t.isCompleted;
     if (filter === 'completed') return t.isCompleted;
     return true;
   });
 
-  const completedCount = todos.filter((t) => t.isCompleted).length;
-  const totalCount = todos.length;
+  const completedCount = dateFilteredTodos.filter((t) => t.isCompleted).length;
+  const totalCount = dateFilteredTodos.length;
   const completionPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
@@ -226,15 +235,33 @@ export const TodoScreen: React.FC = () => {
 
       {/* Progress & Filters Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-[#121A27] border border-slate-800">
-        <div className="flex items-center gap-2">
-          <div className="text-xs font-bold text-slate-300">
-            Progress: {completedCount}/{totalCount} ({completionPercentage}%)
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="text-xs font-bold text-slate-300">
+              Progress: {completedCount}/{totalCount} ({completionPercentage}%)
+            </div>
+            <div className="w-28 h-2 rounded-full bg-slate-800 overflow-hidden">
+              <div
+                className="h-full bg-purple-500 rounded-full transition-all duration-500"
+                style={{ width: `${completionPercentage}%` }}
+              />
+            </div>
           </div>
-          <div className="w-28 h-2 rounded-full bg-slate-800 overflow-hidden">
-            <div
-              className="h-full bg-purple-500 rounded-full transition-all duration-500"
-              style={{ width: `${completionPercentage}%` }}
-            />
+          
+          {/* History Date Selector */}
+          <div className="flex items-center gap-2 border-l border-slate-700 pl-4">
+            <Calendar className="w-4 h-4 text-slate-400" />
+            <select
+              value={historyDate}
+              onChange={(e) => setHistoryDate(e.target.value)}
+              className="bg-transparent text-xs font-bold text-slate-300 focus:outline-none cursor-pointer"
+            >
+              {availableDates.map(date => (
+                <option key={date} value={date} className="bg-slate-900">
+                  {date === getLogicalDate() ? 'Today' : date}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -247,7 +274,7 @@ export const TodoScreen: React.FC = () => {
                 filter === 'all' ? 'bg-purple-600 text-white font-bold' : 'text-slate-400 hover:text-white'
               }`}
             >
-              All ({todos.length})
+              All ({dateFilteredTodos.length})
             </button>
             <button
               onClick={() => setFilter('active')}
@@ -255,7 +282,7 @@ export const TodoScreen: React.FC = () => {
                 filter === 'active' ? 'bg-purple-600 text-white font-bold' : 'text-slate-400 hover:text-white'
               }`}
             >
-              Pending ({todos.filter((t) => !t.isCompleted).length})
+              Pending ({dateFilteredTodos.filter((t) => !t.isCompleted).length})
             </button>
             <button
               onClick={() => setFilter('completed')}
@@ -269,7 +296,7 @@ export const TodoScreen: React.FC = () => {
 
           {completedCount > 0 && (
             <button
-              onClick={clearCompletedTodos}
+              onClick={() => clearCompletedTodos(historyDate)}
               className="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-rose-500/40 text-slate-400 hover:text-rose-400 text-xs transition"
             >
               Clear Done
