@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { HARD_QUOTES } from '../data/initialData';
 import { DailyCheckInCard } from '../components/DailyCheckInCard';
+import { ClassScheduleCard } from '../components/ClassScheduleCard';
 
 export const HomeScreen: React.FC = () => {
   const { 
@@ -186,6 +187,9 @@ export const HomeScreen: React.FC = () => {
 
       {/* Daily Check-In & Streak Lock-In Card */}
       <DailyCheckInCard />
+
+      {/* Class Schedule Routine */}
+      <ClassScheduleCard />
 
       {/* Primary Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
