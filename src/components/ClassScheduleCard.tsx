@@ -9,11 +9,11 @@ export const ClassScheduleCard: React.FC = () => {
   const [targetYear, setTargetYear] = useState<string>(() => {
     try {
       const saved = localStorage.getItem('class_schedule_target_year');
-      if (saved && ['2025', '2026', '2027', '2028'].includes(saved.trim())) {
+      if (saved) {
         return saved.trim();
       }
     } catch (e) {}
-    return '2025';
+    return '2026'; // Defaulting to 2026 as per new bounds
   });
   
   const [timeSlot1, setTimeSlot1] = useState<string>(() => {
@@ -80,6 +80,13 @@ export const ClassScheduleCard: React.FC = () => {
   
 
   
+  // Auto-save target year whenever it changes to prevent reset issues
+  useEffect(() => {
+    try {
+      localStorage.setItem('class_schedule_target_year', targetYear.trim());
+    } catch (e) {}
+  }, [targetYear]);
+
   const handleSaveTargetYear = () => {
     try {
       localStorage.setItem('class_schedule_target_year', targetYear.trim());
@@ -141,10 +148,9 @@ export const ClassScheduleCard: React.FC = () => {
             }}
             className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-sm font-bold text-white focus:outline-none focus:border-amber-500 transition cursor-pointer"
           >
-            <option value="2025">2025</option>
-            <option value="2026">2026</option>
-            <option value="2027">2027</option>
-            <option value="2028">2028</option>
+            {Array.from({ length: 25 }, (_, i) => 2026 + i).map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
           </select>
           <button 
             type="button"
