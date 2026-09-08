@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useApp, getLogicalDate } from '../context/AppContext';
-import { 
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import {
+  GripVertical,
   CheckSquare, 
   Plus, 
   Trash2,
@@ -16,7 +18,9 @@ import {
   Zap,
   ShieldCheck,
   AlertTriangle,
-  Calendar
+  Calendar,
+  Repeat,
+  Clock
 } from 'lucide-react';
 import { PriorityType, RoutineTemplate } from '../types';
 import { ROUTINE_TEMPLATES } from '../data/initialData';
@@ -27,6 +31,8 @@ export const TodoScreen: React.FC = () => {
     addTodo, 
     toggleTodo, 
     deleteTodo,
+    deleteMultipleTodos,
+    completeMultipleTodos,
     editTodo, 
     clearCompletedTodos, 
     applyRoutineTemplate, 
@@ -40,6 +46,8 @@ export const TodoScreen: React.FC = () => {
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('Physics');
   const [priority, setPriority] = useState<PriorityType>('High');
+  const [dueTime, setDueTime] = useState<string>('');
+  const [recurrence, setRecurrence] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
   const [historyDate, setHistoryDate] = useState<string>(getLogicalDate());
 
@@ -48,15 +56,29 @@ export const TodoScreen: React.FC = () => {
     availableDates.unshift(getLogicalDate());
   }
   const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [editingTodo, setEditingTodo] = useState<{ id: string; title: string; subject: string; priority: PriorityType } | null>(null);
+  const [selectedTodos, setSelectedTodos] = useState<string[]>([]);
+  const [editingTodo, setEditingTodo] = useState<{ id: string; title: string; subject: string; priority: PriorityType; dueTime?: string; recurrence?: 'none' | 'daily' | 'weekly' | 'monthly' } | null>(null);
   const [auditResult, setAuditResult] = useState<{ penalized: boolean; message: string } | null>(null);
+
+  
+  const handleDragEnd = (result: any) => {
+    if (!result.destination) return;
+    if (result.destination.index === result.source.index) return;
+    reorderTodos(result.source.index, result.destination.index);
+  };
 
   const handleAddTodo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    addTodo(title.trim(), subject, priority);
+    addTodo(title.trim(), subject, priority, dueTime || undefined, recurrence);
     setTitle('');
+    setDueTime('');
+    setRecurrence('none');
   };
+
+  React.useEffect(() => {
+    setSelectedTodos([]);
+  }, [filter, historyDate]);
 
   const dateFilteredTodos = todos.filter(t => t.dateCreated === historyDate);
 
@@ -192,6 +214,47 @@ export const TodoScreen: React.FC = () => {
         )}
       </div>
 
+      
+      {/* Daily Summary Widget */}
+      <div className="p-4 rounded-2xl bg-[#121A27] border border-slate-800 flex items-center justify-between shadow-sm relative overflow-hidden">
+        {totalCount > 0 && completionPercentage === 100 && (
+           <div className="absolute inset-0 bg-emerald-500/5 animate-pulse"></div>
+        )}
+        <div className="flex items-center gap-4 relative z-10">
+          <div className="relative w-14 h-14 rounded-full flex items-center justify-center bg-slate-900 shadow-inner shrink-0">
+            <svg className="absolute inset-0 w-full h-full transform -rotate-90">
+              <circle cx="28" cy="28" r="24" className="stroke-slate-800 fill-none" strokeWidth="4" />
+              <circle 
+                cx="28" cy="28" r="24" 
+                className="stroke-emerald-400 fill-none transition-all duration-1000 ease-out" 
+                strokeWidth="4" 
+                strokeDasharray="150.796" 
+                strokeDashoffset={150.796 - (150.796 * completionPercentage) / 100}
+                strokeLinecap="round" 
+              />
+            </svg>
+            <span className="text-xs font-black text-white z-10">{completionPercentage}%</span>
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-white mb-0.5">Daily Summary</h3>
+            {totalCount > 0 && completionPercentage === 100 ? (
+              <p className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5 animate-in fade-in slide-in-from-left-2">
+                <Sparkles className="w-3.5 h-3.5" /> Incredible! All tasks are finished for today.
+              </p>
+            ) : totalCount > 0 ? (
+              <p className="text-xs text-slate-400">
+                You have completed <strong className="text-slate-200">{completedCount}</strong> out of <strong className="text-slate-200">{totalCount}</strong> tasks. Keep pushing!
+              </p>
+            ) : (
+              <p className="text-xs text-slate-400">
+                No tasks for today. Add some below to get started!
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+
       {/* Task Creation Card */}
       <form onSubmit={handleAddTodo} className="p-4 rounded-2xl bg-[#121A27] border border-slate-800 space-y-3 shadow-md">
         <div className="flex flex-col sm:flex-row items-center gap-2">
@@ -204,6 +267,13 @@ export const TodoScreen: React.FC = () => {
           />
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
+            <input
+              type="time"
+              value={dueTime}
+              onChange={(e) => setDueTime(e.target.value)}
+              className="px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500 cursor-pointer"
+              title="Optional Due Time"
+            />
             <select
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
@@ -215,6 +285,17 @@ export const TodoScreen: React.FC = () => {
               <option value="General">General</option>
             </select>
 
+            <select
+              value={recurrence}
+              onChange={(e) => setRecurrence(e.target.value as any)}
+              className="px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500 cursor-pointer"
+              title="Repeat"
+            >
+              <option value="none">No Repeat</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
             <select
               value={priority}
               onChange={(e) => setPriority(e.target.value as PriorityType)}
@@ -317,20 +398,55 @@ export const TodoScreen: React.FC = () => {
             <p className="text-xs text-slate-500">Add tasks above or load an AIR routine template.</p>
           </div>
         ) : (
-          filteredTodos.map((todo) => {
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId="todos-list">
+              {(provided) => (
+                <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
+                  {filteredTodos.map((todo, index) => {
             const isHigh = todo.priority === 'High';
             const isMed = todo.priority === 'Medium';
 
+            let isApproaching = false;
+            if (!todo.isCompleted && todo.dueTime) {
+              const [dueHour, dueMinute] = todo.dueTime.split(':').map(Number);
+              const now = new Date();
+              const currentHour = now.getHours();
+              const currentMinute = now.getMinutes();
+              const dueTotalMinutes = dueHour * 60 + dueMinute;
+              const currentTotalMinutes = currentHour * 60 + currentMinute;
+              // highlight if due within next 60 minutes or overdue today
+              if (dueTotalMinutes - currentTotalMinutes <= 60) {
+                isApproaching = true;
+              }
+            }
+
             return (
-              <div
-                key={todo.id}
-                className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
+                    <Draggable key={todo.id} draggableId={todo.id} index={index}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
+                            snapshot.isDragging ? 'shadow-2xl shadow-blue-500/20 z-50 ring-2 ring-blue-500 scale-[1.02]' : ''
+                          } ${
                   todo.isCompleted
                     ? 'bg-slate-950/60 border-slate-800/80 opacity-60'
-                    : 'bg-[#121A27] border-slate-800 hover:border-slate-700 shadow-sm'
+                    : isApproaching ? 'bg-amber-950/20 border-amber-500/40 shadow-amber-500/5' : 'bg-[#121A27] border-slate-800 hover:border-slate-700 shadow-sm'
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div {...provided.dragHandleProps} className="text-slate-600 hover:text-slate-400 cursor-grab active:cursor-grabbing">
+                            <GripVertical className="w-4 h-4" />
+                          </div>
+                          <input 
+                    type="checkbox"
+                    checked={selectedTodos.includes(todo.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedTodos(prev => [...prev, todo.id]);
+                      else setSelectedTodos(prev => prev.filter(id => id !== todo.id));
+                    }}
+                    className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-blue-500 focus:ring-blue-500 cursor-pointer flex-shrink-0"
+                  />
                   <button
                     onClick={() => toggleTodo(todo.id)}
                     className={`flex-shrink-0 w-5 h-5 rounded-lg border flex items-center justify-center transition cursor-pointer ${
@@ -356,8 +472,12 @@ export const TodoScreen: React.FC = () => {
                         {todo.subject}
                       </span>
                       <span
-                        className={`text-[10px] font-bold ${
-                          isHigh ? 'text-rose-400' : isMed ? 'text-amber-400' : 'text-slate-400'
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                          isHigh 
+                            ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' 
+                            : isMed 
+                              ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' 
+                              : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                         }`}
                       >
                         {todo.priority} Priority
@@ -366,6 +486,18 @@ export const TodoScreen: React.FC = () => {
                         <Zap className="w-3 h-3 fill-yellow-400" />
                         +5 EXP
                       </span>
+                      {todo.dueTime && (
+                        <span className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md border ${isApproaching && !todo.isCompleted ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-slate-800 text-slate-300 border-slate-700'}`}>
+                          <Clock className="w-3 h-3" />
+                          {todo.dueTime}
+                        </span>
+                      )}
+                      {todo.recurrence && todo.recurrence !== 'none' && (
+                        <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                          <Repeat className="w-3 h-3" />
+                          {todo.recurrence.charAt(0).toUpperCase() + todo.recurrence.slice(1)}
+                        </span>
+                      )}
                       <span className="text-[10px] text-slate-500 hidden sm:inline">
                         Added: {todo.dateCreated}
                       </span>
@@ -379,7 +511,9 @@ export const TodoScreen: React.FC = () => {
                       id: todo.id,
                       title: todo.title,
                       subject: todo.subject,
-                      priority: todo.priority
+                      priority: todo.priority,
+                      dueTime: todo.dueTime,
+                      recurrence: todo.recurrence
                     })}
                     className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-slate-900 transition"
                     title="Edit task"
@@ -395,10 +529,17 @@ export const TodoScreen: React.FC = () => {
                   </button>
                 </div>
               </div>
-            );
-          })
-        )}
-      </div>
+                      )}
+                    </Draggable>
+                  );
+                })}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
+      )}
+    </div>
 
       {/* Routine Templates Modal */}
       
@@ -421,7 +562,7 @@ export const TodoScreen: React.FC = () => {
               onSubmit={(e) => {
                 e.preventDefault();
                 if (editingTodo.title.trim()) {
-                  editTodo(editingTodo.id, editingTodo.title.trim(), editingTodo.subject, editingTodo.priority);
+                  editTodo(editingTodo.id, editingTodo.title.trim(), editingTodo.subject, editingTodo.priority, editingTodo.dueTime || undefined, editingTodo.recurrence);
                   setEditingTodo(null);
                 }
               }}
@@ -439,7 +580,33 @@ export const TodoScreen: React.FC = () => {
               </div>
               
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="col-span-2 grid grid-cols-2 gap-4">
+                  <div className="col-span-1">
+                    <label className="text-xs font-bold text-slate-400 mb-1.5 block">Due Time</label>
+                    <input
+                      type="time"
+                      value={editingTodo.dueTime || ''}
+                      onChange={(e) => setEditingTodo({ ...editingTodo, dueTime: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+                    />
+                  </div>
+                  <div className="col-span-1">
+                    <label className="text-xs font-bold text-slate-400 mb-1.5 block">Repeat</label>
+                    <select
+                      value={editingTodo.recurrence || 'none'}
+                      onChange={(e) => setEditingTodo({ ...editingTodo, recurrence: e.target.value as any })}
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+                    >
+                      <option value="none">None</option>
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                    </select>
+                  </div>
+                </div>
+                
+                
+                <div className="col-span-1 sm:col-span-1">
                   <label className="text-xs font-bold text-slate-400 mb-1.5 block">Subject</label>
                   <select
                     value={editingTodo.subject}
@@ -483,6 +650,45 @@ export const TodoScreen: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+
+      {/* Routine Templates Modal */}
+      
+      {/* Floating Bulk Action Toolbar */}
+      {selectedTodos.length > 0 && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 bg-slate-800 border border-slate-700 shadow-2xl rounded-full px-4 py-2.5 flex items-center gap-4 animate-in slide-in-from-bottom-5">
+          <span className="text-sm font-bold text-slate-200">
+            {selectedTodos.length} selected
+          </span>
+          <div className="flex items-center gap-2 border-l border-slate-600 pl-4">
+            <button
+              onClick={() => {
+                completeMultipleTodos(selectedTodos);
+                setSelectedTodos([]);
+              }}
+              className="px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 font-bold text-xs transition"
+            >
+              Mark Done
+            </button>
+            <button
+              onClick={() => {
+                deleteMultipleTodos(selectedTodos);
+                setSelectedTodos([]);
+              }}
+              className="px-3 py-1.5 rounded-full bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 font-bold text-xs transition"
+            >
+              Delete
+            </button>
+            <button
+              onClick={() => setSelectedTodos([])}
+              className="p-1.5 rounded-full hover:bg-slate-700 text-slate-400 transition"
+              title="Clear selection"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}

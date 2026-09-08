@@ -1,0 +1,250 @@
+                    onClick={() => setEditingTodo({
+                      id: todo.id,
+                      title: todo.title,
+                      subject: todo.subject,
+                      priority: todo.priority,
+                      dueTime: todo.dueTime,
+                      recurrence: todo.recurrence
+                    })}
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-slate-900 transition"
+                    title="Edit task"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => deleteTodo(todo.id)}
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-900 transition ml-2"
+                  title="Delete task"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+                      )}
+                    </Draggable>
+                  );
+                })}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
+      )}
+    </div>
+
+      {/* Routine Templates Modal */}
+      
+      {/* Edit Task Modal */}
+      {editingTodo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in overscroll-contain">
+          <div className="relative w-full max-w-lg rounded-3xl bg-[#121A27] border border-slate-700 p-6 shadow-2xl space-y-4">
+            <button
+              onClick={() => setEditingTodo(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
+              <Edit2 className="w-6 h-6 text-blue-400" />
+              <h2 className="text-xl font-black text-white">Edit Task</h2>
+            </div>
+            
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (editingTodo.title.trim()) {
+                  editTodo(editingTodo.id, editingTodo.title.trim(), editingTodo.subject, editingTodo.priority, editingTodo.dueTime || undefined, editingTodo.recurrence);
+                  setEditingTodo(null);
+                }
+              }}
+              className="space-y-4 pt-2"
+            >
+              <div>
+                <label className="text-xs font-bold text-slate-400 mb-1.5 block">Task Title</label>
+                <input
+                  type="text"
+                  value={editingTodo.title}
+                  onChange={(e) => setEditingTodo({ ...editingTodo, title: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-sm text-white focus:outline-none focus:border-blue-500/60"
+                  required
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2 grid grid-cols-2 gap-4">
+                  <div className="col-span-1">
+                    <label className="text-xs font-bold text-slate-400 mb-1.5 block">Due Time</label>
+                    <input
+                      type="time"
+                      value={editingTodo.dueTime || ''}
+                      onChange={(e) => setEditingTodo({ ...editingTodo, dueTime: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+                    />
+                  </div>
+                  <div className="col-span-1">
+                    <label className="text-xs font-bold text-slate-400 mb-1.5 block">Repeat</label>
+                    <select
+                      value={editingTodo.recurrence || 'none'}
+                      onChange={(e) => setEditingTodo({ ...editingTodo, recurrence: e.target.value as any })}
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+                    >
+                      <option value="none">None</option>
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                    </select>
+                  </div>
+                </div>
+                
+                
+                <div className="col-span-1 sm:col-span-1">
+                  <label className="text-xs font-bold text-slate-400 mb-1.5 block">Subject</label>
+                  <select
+                    value={editingTodo.subject}
+                    onChange={(e) => setEditingTodo({ ...editingTodo, subject: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="Physics">Physics</option>
+                    <option value="Chemistry">Chemistry</option>
+                    <option value="Mathematics">Math</option>
+                    <option value="General">General</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="text-xs font-bold text-slate-400 mb-1.5 block">Priority</label>
+                  <select
+                    value={editingTodo.priority}
+                    onChange={(e) => setEditingTodo({ ...editingTodo, priority: e.target.value as PriorityType })}
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="High">High Priority</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setEditingTodo(null)}
+                  className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition shadow-lg shadow-blue-500/20"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+
+      {/* Routine Templates Modal */}
+      
+      {/* Floating Bulk Action Toolbar */}
+      {selectedTodos.length > 0 && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 bg-slate-800 border border-slate-700 shadow-2xl rounded-full px-4 py-2.5 flex items-center gap-4 animate-in slide-in-from-bottom-5">
+          <span className="text-sm font-bold text-slate-200">
+            {selectedTodos.length} selected
+          </span>
+          <div className="flex items-center gap-2 border-l border-slate-600 pl-4">
+            <button
+              onClick={() => {
+                completeMultipleTodos(selectedTodos);
+                setSelectedTodos([]);
+              }}
+              className="px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 font-bold text-xs transition"
+            >
+              Mark Done
+            </button>
+            <button
+              onClick={() => {
+                deleteMultipleTodos(selectedTodos);
+                setSelectedTodos([]);
+              }}
+              className="px-3 py-1.5 rounded-full bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 font-bold text-xs transition"
+            >
+              Delete
+            </button>
+            <button
+              onClick={() => setSelectedTodos([])}
+              className="p-1.5 rounded-full hover:bg-slate-700 text-slate-400 transition"
+              title="Clear selection"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+
+      {/* Routine Templates Modal */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in overscroll-contain">
+          <div className="relative w-full max-w-2xl rounded-3xl bg-[#121A27] border border-slate-700 p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto overscroll-contain">
+            <button
+              onClick={() => setShowTemplateModal(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div>
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-amber-400" />
+                Ranker Routine Templates
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Choose a proven daily regiment. Applying a template will instantly append its tasks to your list.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+              {ROUTINE_TEMPLATES.map((tpl, i) => (
+                <div
+                  key={i}
+                  className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-purple-500/50 transition flex flex-col justify-between space-y-3"
+                >
+                  <div>
+                    <h3 className="font-bold text-white text-sm">{tpl.title}</h3>
+                    <p className="text-xs text-slate-400 mt-1 leading-relaxed">{tpl.description}</p>
+                    <div className="mt-3 space-y-1">
+                      {tpl.tasks.slice(0, 3).map((t, idx) => (
+                        <div key={idx} className="text-[11px] text-slate-300 flex items-center gap-1.5 truncate">
+                          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0" />
+                          <span className="truncate">{t.title}</span>
+                        </div>
+                      ))}
+                      {tpl.tasks.length > 3 && (
+                        <div className="text-[10px] text-slate-500 italic">
+                          + {tpl.tasks.length - 3} more tasks
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      applyRoutineTemplate(tpl);
+                      setShowTemplateModal(false);
+                    }}
+                    className="w-full py-2 rounded-xl bg-purple-600/30 hover:bg-purple-600 border border-purple-500/40 text-purple-200 hover:text-white font-bold text-xs transition cursor-pointer"
+                  >
+                    Apply Template ({tpl.tasks.length} Tasks)
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

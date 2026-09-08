@@ -59,11 +59,14 @@ interface AppContextType {
   
   // Todos
   todos: TodoItem[];
-  addTodo: (title: string, subject: string, priority: PriorityType) => void;
+  addTodo: (title: string, subject: string, priority: PriorityType, dueTime?: string, recurrence?: 'none' | 'daily' | 'weekly' | 'monthly') => void;
   addMultipleTodos: (items: { title: string; subject: string; priority: PriorityType }[]) => void;
   toggleTodo: (id: string) => void;
   deleteTodo: (id: string) => void;
-  editTodo: (id: string, title: string, subject: string, priority: PriorityType) => void;
+  deleteMultipleTodos: (ids: string[]) => void;
+  reorderTodos: (startIndex: number, endIndex: number) => void;
+  completeMultipleTodos: (ids: string[]) => void;
+  editTodo: (id: string, title: string, subject: string, priority: PriorityType, dueTime?: string, recurrence?: 'none' | 'daily' | 'weekly' | 'monthly') => void;
   clearCompletedTodos: (dateToClear?: string) => void;
   applyRoutineTemplate: (template: RoutineTemplate) => void;
   
@@ -278,6 +281,15 @@ export const getLogicalDate = (): string => {
   }
   return d.toISOString().split('T')[0];
 };
+
+
+function getNextRecurrenceDate(baseDateStr: string, recurrence: string) {
+  const d = new Date(baseDateStr);
+  if (recurrence === 'daily') d.setDate(d.getDate() + 1);
+  else if (recurrence === 'weekly') d.setDate(d.getDate() + 7);
+  else if (recurrence === 'monthly') d.setMonth(d.getMonth() + 1);
+  return d.toISOString().split('T')[0];
+}
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentTab, setCurrentTab] = useState<NavTab>('home');
@@ -719,14 +731,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Todos
-  const addTodo = (title: string, subject: string, priority: PriorityType) => {
+  const addTodo = (title: string, subject: string, priority: PriorityType, dueTime?: string, recurrence?: 'none' | 'daily' | 'weekly' | 'monthly') => {
     const newTodo: TodoItem = {
       id: 't_' + Date.now(),
       title,
       subject,
       priority,
       isCompleted: false,
-      dateCreated: getLogicalDate()
+      dateCreated: getLogicalDate(),
+      dueTime,
+      recurrence: recurrence || 'none',
+      hasSpawnedNext: false
     };
     setTodos(prev => [newTodo, ...prev]);
   };
@@ -761,8 +776,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const editTodo = (id: string, title: string, subject: string, priority: PriorityType) => {
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, title, subject, priority } : t));
+  const editTodo = (id: string, title: string, subject: string, priority: PriorityType, dueTime?: string, recurrence?: 'none' | 'daily' | 'weekly' | 'monthly') => {
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, title, subject, priority, dueTime, recurrence: recurrence || 'none' } : t));
+  };
+
+  const deleteMultipleTodos = (ids: string[]) => {
+    setTodos(prev => prev.filter(t => !ids.includes(t.id)));
+  };
+
+  const completeMultipleTodos = (ids: string[]) => {
+    setTodos(prev => {
+      const newSpawned: TodoItem[] = [];
+      const mappedPrev = prev.map(t => {
+        if (ids.includes(t.id) && !t.isCompleted) {
+          let hasSpawned = t.hasSpawnedNext;
+          if (t.recurrence && t.recurrence !== 'none' && !hasSpawned) {
+             hasSpawned = true;
+             newSpawned.push({
+                ...t,
+                id: 't_' + Date.now() + Math.random().toString(36).substr(2, 9),
+                isCompleted: false,
+                dateCreated: getNextRecurrenceDate(t.dateCreated, t.recurrence),
+                hasSpawnedNext: false
+             });
+          }
+          return { ...t, isCompleted: true, hasSpawnedNext: hasSpawned };
+        }
+        return t;
+      });
+      
+      return [...newSpawned, ...mappedPrev];
+    });
+  };
+
+  const reorderTodos = (startIndex: number, endIndex: number) => {
+    setTodos((prev) => {
+      const result = Array.from(prev);
+      const [removed] = result.splice(startIndex, 1);
+      result.splice(endIndex, 0, removed);
+      return result;
+    });
   };
 
   const deleteTodo = (id: string) => {
@@ -1129,6 +1182,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addMultipleTodos,
         toggleTodo,
         deleteTodo,
+        deleteMultipleTodos,
+        completeMultipleTodos,
         editTodo,
         clearCompletedTodos,
         applyRoutineTemplate,

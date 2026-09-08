@@ -36,6 +36,9 @@ export interface TodoItem {
   priority: PriorityType;
   isCompleted: boolean;
   dateCreated: string;
+  dueTime?: string;
+  recurrence?: 'none' | 'daily' | 'weekly' | 'monthly';
+  hasSpawnedNext?: boolean;
 }
 
 export interface StudySession {

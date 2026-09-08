@@ -5,7 +5,9 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 const SUBJECTS = ['Physics', 'Chemistry', 'Mathematics', 'Self-Study', 'Mock Test', 'Break'];
 
 export const ClassScheduleCard: React.FC = () => {
-  const [targetYear, setTargetYear] = useState<string>('2025');
+  const [targetYear, setTargetYear] = useState<string>(() => {
+    return localStorage.getItem('class_schedule_target_year') || '2025';
+  });
   
   const [timeSlot1, setTimeSlot1] = useState<string>(() => {
     return localStorage.getItem('class_schedule_slot1') || '04:00 pm - 05:45 pm';
@@ -67,6 +69,10 @@ export const ClassScheduleCard: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('class_schedule_date_to', dateTo);
   }, [dateTo]);
+
+  useEffect(() => {
+    localStorage.setItem('class_schedule_target_year', targetYear);
+  }, [targetYear]);
 
   const updateCell = (day: string, slotId: string, subject: string) => {
     setSchedule(prev => ({
