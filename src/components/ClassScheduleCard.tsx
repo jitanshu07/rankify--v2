@@ -7,7 +7,13 @@ const SUBJECTS = ['Physics', 'Chemistry', 'Mathematics', 'Self-Study', 'Mock Tes
 export const ClassScheduleCard: React.FC = () => {
   const [isSaved, setIsSaved] = useState(false);
   const [targetYear, setTargetYear] = useState<string>(() => {
-    return localStorage.getItem('class_schedule_target_year') || '2025';
+    try {
+      const saved = localStorage.getItem('class_schedule_target_year');
+      if (saved && ['2025', '2026', '2027', '2028'].includes(saved.trim())) {
+        return saved.trim();
+      }
+    } catch (e) {}
+    return '2025';
   });
   
   const [timeSlot1, setTimeSlot1] = useState<string>(() => {
@@ -75,7 +81,9 @@ export const ClassScheduleCard: React.FC = () => {
 
   
   const handleSaveTargetYear = () => {
-    localStorage.setItem('class_schedule_target_year', targetYear);
+    try {
+      localStorage.setItem('class_schedule_target_year', targetYear.trim());
+    } catch (e) {}
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
   };
@@ -139,6 +147,7 @@ export const ClassScheduleCard: React.FC = () => {
             <option value="2028">2028</option>
           </select>
           <button 
+            type="button"
             onClick={handleSaveTargetYear}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs transition ${isSaved ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500 text-amber-950 hover:bg-amber-400'}`}
           >
