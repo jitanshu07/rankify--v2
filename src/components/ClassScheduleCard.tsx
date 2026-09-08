@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar } from 'lucide-react';
+import { Calendar, Save, CheckCircle2 } from 'lucide-react';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const SUBJECTS = ['Physics', 'Chemistry', 'Mathematics', 'Self-Study', 'Mock Test', 'Break'];
 
 export const ClassScheduleCard: React.FC = () => {
+  const [isSaved, setIsSaved] = useState(false);
   const [targetYear, setTargetYear] = useState<string>(() => {
     return localStorage.getItem('class_schedule_target_year') || '2025';
   });
@@ -70,9 +71,14 @@ export const ClassScheduleCard: React.FC = () => {
     localStorage.setItem('class_schedule_date_to', dateTo);
   }, [dateTo]);
 
-  useEffect(() => {
+  
+
+  
+  const handleSaveTargetYear = () => {
     localStorage.setItem('class_schedule_target_year', targetYear);
-  }, [targetYear]);
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 2000);
+  };
 
   const updateCell = (day: string, slotId: string, subject: string) => {
     setSchedule(prev => ({
@@ -118,17 +124,34 @@ export const ClassScheduleCard: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Target Year:</span>
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider hidden sm:inline">Target Year:</span>
           <select 
             value={targetYear}
-            onChange={(e) => setTargetYear(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-sm font-bold text-white focus:outline-none focus:border-amber-500 transition"
+            onChange={(e) => {
+              setTargetYear(e.target.value);
+              setIsSaved(false);
+            }}
+            className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-sm font-bold text-white focus:outline-none focus:border-amber-500 transition cursor-pointer"
           >
             <option value="2025">2025</option>
             <option value="2026">2026</option>
             <option value="2027">2027</option>
             <option value="2028">2028</option>
           </select>
+          <button 
+            onClick={handleSaveTargetYear}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs transition ${isSaved ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500 text-amber-950 hover:bg-amber-400'}`}
+          >
+            {isSaved ? (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5" /> Saved
+              </>
+            ) : (
+              <>
+                <Save className="w-3.5 h-3.5" /> Save
+              </>
+            )}
+          </button>
         </div>
       </div>
 
