@@ -8,7 +8,7 @@ export const ClassScheduleCard: React.FC = () => {
   const [isSaved, setIsSaved] = useState(false);
   const [targetYear, setTargetYear] = useState<string>(() => {
     try {
-      const saved = localStorage.getItem('class_schedule_target_year');
+      const saved = localStorage.getItem('arjuna_target_year');
       if (saved) {
         return saved.trim();
       }
@@ -83,13 +83,13 @@ export const ClassScheduleCard: React.FC = () => {
   // Auto-save target year whenever it changes to prevent reset issues
   useEffect(() => {
     try {
-      localStorage.setItem('class_schedule_target_year', targetYear.trim());
+      localStorage.setItem('arjuna_target_year', targetYear.trim());
     } catch (e) {}
   }, [targetYear]);
 
   const handleSaveTargetYear = () => {
     try {
-      localStorage.setItem('class_schedule_target_year', targetYear.trim());
+      localStorage.setItem('arjuna_target_year', targetYear.trim());
     } catch (e) {}
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
