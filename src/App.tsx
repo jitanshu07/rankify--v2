@@ -4,7 +4,6 @@ import { Navbar } from './components/Navbar';
 import { Navigation } from './components/Navigation';
 import { StreakModal } from './components/StreakModal';
 import { ProfileModal } from './components/ProfileModal';
-import { DailyCheckInModal } from './components/DailyCheckInModal';
 import { HomeScreen } from './screens/HomeScreen';
 import { AIMentorScreen } from './screens/AIMentorScreen';
 import { SyllabusScreen } from './screens/SyllabusScreen';
@@ -21,8 +20,8 @@ export const App: React.FC = () => {
     currentTab, 
     isProfileModalOpen, 
     closeProfileModal,
-    isCheckInModalOpen,
-    closeCheckInModal
+    
+    
   } = useApp();
   const [isStreakOpen, setIsStreakOpen] = useState(false);
 
@@ -48,8 +47,6 @@ export const App: React.FC = () => {
         {currentTab === 'login' && <LoginScreen />}
       </main>
 
-      {/* Daily Check-In Modal */}
-      <DailyCheckInModal isOpen={isCheckInModalOpen} onClose={closeCheckInModal} />
 
       {/* Streak Modal */}
       <StreakModal isOpen={isStreakOpen} onClose={() => setIsStreakOpen(false)} />

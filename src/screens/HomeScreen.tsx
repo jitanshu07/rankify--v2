@@ -24,7 +24,6 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { HARD_QUOTES } from '../data/initialData';
-import { DailyCheckInCard } from '../components/DailyCheckInCard';
 import { ClassScheduleCard } from '../components/ClassScheduleCard';
 
 export const HomeScreen: React.FC = () => {
@@ -186,7 +185,6 @@ export const HomeScreen: React.FC = () => {
       )}
 
       {/* Daily Check-In & Streak Lock-In Card */}
-      <DailyCheckInCard />
 
       {/* Class Schedule Routine */}
       <ClassScheduleCard />

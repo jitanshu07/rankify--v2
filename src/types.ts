@@ -92,18 +92,6 @@ export interface UserProfile {
   lastPenaltyReason?: string;
 }
 
-export interface DailyCheckIn {
-  id: string;
-  date: string; // YYYY-MM-DD
-  timestamp: number;
-  mood: string;
-  readiness: 'Peak Energy' | 'Focused & Steady' | 'Tired but Determined' | 'Low / Struggling';
-  targetHours: number;
-  primarySubject: SubjectType | 'All Subjects';
-  commitment: string;
-  reflection?: string;
-}
-
 export interface RoutineTemplate {
   title: string;
   description: string;

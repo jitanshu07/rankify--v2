@@ -11,7 +11,6 @@ import {
   NavTab, 
   PriorityType, 
   RoutineTemplate,
-  DailyCheckIn,
   AuthUser,
   UserAccountRecord
 } from '../types';
@@ -95,13 +94,7 @@ interface AppContextType {
   deleteError: (id: string) => void;
 
   // Daily Check-In & Streak Rewards
-  checkIns: DailyCheckIn[];
-  todaysCheckIn: DailyCheckIn | undefined;
-  submitDailyCheckIn: (data: Omit<DailyCheckIn, 'id' | 'date' | 'timestamp'>) => void;
-  deleteCheckIn: (id: string) => void;
-  isCheckInModalOpen: boolean;
-  openCheckInModal: () => void;
-  closeCheckInModal: () => void;
+   
   
   // End of Day & EXP Penalty
   triggerEndOfDayCheck: () => { penalized: boolean; message: string };
@@ -186,9 +179,6 @@ const loadUserScopedData = (
   }
 
   // Check-ins
-  const checkinsKey = getScopedKey(userId, 'checkins');
-  const savedCheckins = localStorage.getItem(checkinsKey);
-  let loadedCheckins: DailyCheckIn[] = [];
   if (savedCheckins) {
     try {
       loadedCheckins = JSON.parse(savedCheckins);
@@ -197,7 +187,6 @@ const loadUserScopedData = (
     }
   } else {
     loadedCheckins = [];
-    localStorage.setItem(checkinsKey, JSON.stringify(loadedCheckins));
   }
 
   // Sessions
@@ -265,7 +254,6 @@ const loadUserScopedData = (
   return {
     profile: loadedProfile,
     todos: loadedTodos,
-    checkIns: loadedCheckins,
     sessions: loadedSessions,
     tracking: loadedTracking,
     backlogs: loadedBacklogs,
@@ -337,7 +325,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [profile, setProfile] = useState<UserProfile>(initialData.profile);
   const [todos, setTodos] = useState<TodoItem[]>(initialData.todos);
-  const [checkIns, setCheckIns] = useState<DailyCheckIn[]>(initialData.checkIns);
   const [sessions, setSessions] = useState<StudySession[]>(initialData.sessions);
   const [trackingStateMap, setTrackingStateMap] = useState<Record<number, ChapterTrackingState>>(initialData.tracking);
   const [backlogs, setBacklogs] = useState<BacklogItem[]>(initialData.backlogs);
@@ -352,7 +339,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return INITIAL_FORMULAS;
   });
 
-  const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
 
   // Persist Theme
   useEffect(() => {
@@ -395,10 +381,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem(key, JSON.stringify(todos));
   }, [todos, currentUser]);
 
-  useEffect(() => {
-    const key = getScopedKey(currentUser?.id, 'checkins');
-    localStorage.setItem(key, JSON.stringify(checkIns));
-  }, [checkIns, currentUser]);
 
   useEffect(() => {
     const key = getScopedKey(currentUser?.id, 'sessions');
@@ -434,7 +416,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const targetId = currentUser?.id || null;
     localStorage.setItem(getScopedKey(targetId, 'profile'), JSON.stringify(profile));
     localStorage.setItem(getScopedKey(targetId, 'todos'), JSON.stringify(todos));
-    localStorage.setItem(getScopedKey(targetId, 'checkins'), JSON.stringify(checkIns));
     localStorage.setItem(getScopedKey(targetId, 'sessions'), JSON.stringify(sessions));
     localStorage.setItem(getScopedKey(targetId, 'tracking'), JSON.stringify(trackingStateMap));
     localStorage.setItem(getScopedKey(targetId, 'backlogs'), JSON.stringify(backlogs));
@@ -486,7 +467,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const data = loadUserScopedData(userId, cleanName, newAccount.targetExam, newAccount.targetYear);
     setProfile(data.profile);
     setTodos(data.todos);
-    setCheckIns(data.checkIns);
     setSessions(data.sessions);
     setTrackingStateMap(data.tracking);
     setBacklogs(data.backlogs);
@@ -556,7 +536,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const data = loadUserScopedData(account.id, account.name, account.targetExam, account.targetYear);
     setProfile(data.profile);
     setTodos(data.todos);
-    setCheckIns(data.checkIns);
     setSessions(data.sessions);
     setTrackingStateMap(data.tracking);
     setBacklogs(data.backlogs);
@@ -587,7 +566,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (options?.importGuestData) {
       localStorage.setItem(getScopedKey(user.id, 'profile'), JSON.stringify(profile));
       localStorage.setItem(getScopedKey(user.id, 'todos'), JSON.stringify(todos));
-      localStorage.setItem(getScopedKey(user.id, 'checkins'), JSON.stringify(checkIns));
       localStorage.setItem(getScopedKey(user.id, 'sessions'), JSON.stringify(sessions));
       localStorage.setItem(getScopedKey(user.id, 'tracking'), JSON.stringify(trackingStateMap));
       localStorage.setItem(getScopedKey(user.id, 'backlogs'), JSON.stringify(backlogs));
@@ -625,7 +603,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const data = loadUserScopedData(user.id, user.name);
     setProfile(data.profile);
     setTodos(data.todos);
-    setCheckIns(data.checkIns);
     setSessions(data.sessions);
     setTrackingStateMap(data.tracking);
     setBacklogs(data.backlogs);
@@ -646,7 +623,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const guestData = loadUserScopedData(null, 'Aspirant');
     setProfile(guestData.profile);
     setTodos(guestData.todos);
-    setCheckIns(guestData.checkIns);
     setSessions(guestData.sessions);
     setTrackingStateMap(guestData.tracking);
     setBacklogs(guestData.backlogs);
@@ -664,7 +640,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const data = loadUserScopedData(target.id, target.name);
     setProfile(data.profile);
     setTodos(data.todos);
-    setCheckIns(data.checkIns);
     setSessions(data.sessions);
     setTrackingStateMap(data.tracking);
     setBacklogs(data.backlogs);
@@ -675,7 +650,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const removeAccountData = (userId: string) => {
-    ['profile', 'todos', 'checkins', 'sessions', 'tracking', 'backlogs', 'errors', 'chapters'].forEach((f) => {
+    ['profile', 'todos', 'sessions', 'tracking', 'backlogs', 'errors', 'chapters'].forEach((f) => {
       localStorage.removeItem(getScopedKey(userId, f));
     });
     setKnownUsers((prev) => prev.filter((u) => u.id !== userId));
@@ -686,10 +661,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const todayDateStr = getLogicalDate();
-  const todaysCheckIn = checkIns.find(c => c.date === todayDateStr);
 
-  const openCheckInModal = () => setIsCheckInModalOpen(true);
-  const closeCheckInModal = () => setIsCheckInModalOpen(false);
 
   const toggleDarkMode = () => setIsDarkMode(prev => !prev);
 
@@ -786,19 +758,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const toggleTodo = (id: string) => {
+    const target = todos.find(t => t.id === id);
+    if (!target) return;
+    
+    const willBeCompleted = !target.isCompleted;
+
     setTodos(prev => {
-      const target = prev.find(t => t.id === id);
-      if (!target) return prev;
-      const willBeCompleted = !target.isCompleted;
+      const pTarget = prev.find(t => t.id === id);
+      if (!pTarget) return prev;
+      const nowCompleted = !pTarget.isCompleted;
 
-      // Give +5 EXP for every task completed in the To-Do list; deduct 5 if unchecked (min 0)
-      setProfile(p => {
-        const expDelta = willBeCompleted ? 5 : -5;
-        const nextExp = Math.max(0, (p.exp || 0) + expDelta);
-        return { ...p, exp: nextExp };
-      });
+      let hasSpawned = pTarget.hasSpawnedNext;
+      const newSpawned: TodoItem[] = [];
+      
+      if (nowCompleted && pTarget.recurrence && pTarget.recurrence !== 'none' && !hasSpawned) {
+         hasSpawned = true;
+         newSpawned.push({
+            ...pTarget,
+            id: 't_' + Date.now() + Math.random().toString(36).substring(2, 11),
+            isCompleted: false,
+            dateCreated: getNextRecurrenceDate(pTarget.dateCreated, pTarget.recurrence),
+            hasSpawnedNext: false
+         });
+      }
 
-      return prev.map(t => t.id === id ? { ...t, isCompleted: willBeCompleted } : t);
+      const mapped = prev.map(t => t.id === id ? { ...t, isCompleted: nowCompleted, hasSpawnedNext: hasSpawned } : t);
+      return [...newSpawned, ...mapped];
+    });
+
+    setProfile(p => {
+      const expDelta = willBeCompleted ? 5 : -5;
+      const nextExp = Math.max(0, (p.exp || 0) + expDelta);
+      let nextProfile = { ...p, exp: nextExp };
+      
+      if (willBeCompleted) {
+        nextProfile = recordDailyActivity(nextProfile, getLogicalDate());
+      }
+      
+      return nextProfile;
     });
   };
 
@@ -811,6 +808,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const completeMultipleTodos = (ids: string[]) => {
+    const newlyCompleted = todos.filter(t => ids.includes(t.id) && !t.isCompleted).length;
+
     setTodos(prev => {
       const newSpawned: TodoItem[] = [];
       const mappedPrev = prev.map(t => {
@@ -820,7 +819,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
              hasSpawned = true;
              newSpawned.push({
                 ...t,
-                id: 't_' + Date.now() + Math.random().toString(36).substr(2, 9),
+                id: 't_' + Date.now() + Math.random().toString(36).substring(2, 11),
                 isCompleted: false,
                 dateCreated: getNextRecurrenceDate(t.dateCreated, t.recurrence),
                 hasSpawnedNext: false
@@ -833,6 +832,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       return [...newSpawned, ...mappedPrev];
     });
+
+    if (newlyCompleted > 0) {
+       setProfile(p => {
+          const nextExp = Math.max(0, (p.exp || 0) + (newlyCompleted * 5));
+          let nextProfile = { ...p, exp: nextExp };
+          nextProfile = recordDailyActivity(nextProfile, getLogicalDate());
+          return nextProfile;
+       });
+    }
   };
 
   const reorderTodos = (startIndex: number, endIndex: number) => {
@@ -927,30 +935,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSessions(prev => prev.filter(s => s.id !== id));
   };
 
-  // Daily Check-In
-  const submitDailyCheckIn = (data: Omit<DailyCheckIn, 'id' | 'date' | 'timestamp'>) => {
-    const today = getLogicalDate();
-    const now = Date.now();
-    
-    const newCheckIn: DailyCheckIn = {
-      ...data,
-      id: 'ci_' + today,
-      date: today,
-      timestamp: now
-    };
-
-    setCheckIns(prev => {
-      const filtered = prev.filter(c => c.date !== today);
-      return [newCheckIn, ...filtered];
-    });
-
-    // Reward daily consistency via streak advancement
-    setProfile(prev => recordDailyActivity(prev, today));
-  };
-
-  const deleteCheckIn = (id: string) => {
-    setCheckIns(prev => prev.filter(c => c.id !== id));
-  };
 
   // Backlogs
   const addBacklog = (title: string, subject: string, targetDate: string, urgency: 'Critical' | 'High' | 'Medium', lectureFrom?: number, lectureTo?: number) => {
@@ -1123,7 +1107,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       sessions,
       backlogs,
       errors,
-      checkIns,
       exportedAt: new Date().toISOString()
     };
     const blob = new Blob([JSON.stringify(fullData, null, 2)], { type: 'application/json' });
@@ -1145,7 +1128,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (data.sessions) setSessions(data.sessions);
       if (data.backlogs) setBacklogs(data.backlogs);
       if (data.errors) setErrors(data.errors);
-      if (data.checkIns) setCheckIns(data.checkIns);
       if (data.profile) setProfile(data.profile);
       return true;
     } catch (e) {
@@ -1160,7 +1142,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const resetAllData = () => {
     if (window.confirm("Are you sure you want to reset your Rankify study data back to 0?")) {
       const targetId = currentUser?.id || null;
-      ['profile', 'todos', 'checkins', 'sessions', 'tracking', 'backlogs', 'errors', 'chapters'].forEach((f) => {
+      ['profile', 'todos', 'sessions', 'tracking', 'backlogs', 'errors', 'chapters'].forEach((f) => {
         localStorage.removeItem(getScopedKey(targetId, f));
       });
       setTrackingStateMap({});
@@ -1168,7 +1150,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setSessions([]);
       setBacklogs([]);
       setErrors([]);
-      setCheckIns([]);
       setChapters(INITIAL_CHAPTERS.map((ch) => ({ ...ch, isCompleted: false })));
       setProfile(createDefaultProfile(currentUser?.name || 'Aspirant'));
     }
@@ -1229,13 +1210,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addError,
         toggleErrorResolved,
         deleteError,
-        checkIns,
-        todaysCheckIn,
-        submitDailyCheckIn,
-        deleteCheckIn,
-        isCheckInModalOpen,
-        openCheckInModal,
-        closeCheckInModal,
         triggerEndOfDayCheck,
         clearPenaltyNotice,
         exportData,

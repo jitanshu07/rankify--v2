@@ -16,8 +16,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenStreak }) => {
     importData, 
     resetAllData, 
     openProfileModal,
-    todaysCheckIn,
-    openCheckInModal,
+    
+    
     currentUser,
     logout,
     setCurrentTab
@@ -128,30 +128,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenStreak }) => {
           <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-xs font-mono text-cyan-400">
             <Clock className="w-3.5 h-3.5 text-cyan-400/80" />
             <span>{timeString}</span>
-          </div>
 
-          {/* Daily Check-In Action */}
-          <button
-            onClick={openCheckInModal}
-            className={`hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-sm ${
-              todaysCheckIn
-                ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20'
-                : 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 border-amber-500/50 text-amber-300 hover:text-white hover:border-amber-400 animate-pulse'
-            }`}
-            title={todaysCheckIn ? 'Daily Check-In Completed for Today' : 'Daily Check-In Pending (+1 Streak Day)'}
-          >
-            {todaysCheckIn ? (
-              <>
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Checked In</span>
-              </>
-            ) : (
-              <>
-                <Flame className="w-3.5 h-3.5 fill-amber-400" />
-                <span>Check-In</span>
-              </>
-            )}
-          </button>
+          </div>
 
           {/* Streak Flame Badge */}
           <button
