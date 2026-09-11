@@ -7,6 +7,20 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      keyframes: {
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        'pop-in': {
+          '0%': { opacity: '0', transform: 'scale(0.95)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+      },
+      animation: {
+        'pop-in': 'pop-in 0.25s ease-out forwards',
+        'fade-in': 'fade-in 0.2s ease-out forwards',
+      },
       colors: {
         brand: {
           dark: '#0B0F17',
