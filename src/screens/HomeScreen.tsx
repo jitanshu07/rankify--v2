@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { HARD_QUOTES } from '../data/initialData';
 import { ClassScheduleCard } from '../components/ClassScheduleCard';
+import { MotivationMusic } from '../components/MotivationMusic';
 
 export const HomeScreen: React.FC = () => {
   const { 
@@ -631,6 +632,9 @@ export const HomeScreen: React.FC = () => {
             </button>
           </div>
         </div>
+      </div>
+      <div className="mt-6">
+        <MotivationMusic />
       </div>
     </div>
   );
