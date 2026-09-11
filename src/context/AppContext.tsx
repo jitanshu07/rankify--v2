@@ -303,7 +303,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [knownUsers, setKnownUsers] = useState<AuthUser[]>(() => {
     const saved = localStorage.getItem(AUTH_KEYS.KNOWN_USERS);
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+      try { 
+        const parsed = JSON.parse(saved); 
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) { /* ignore */ }
     }
     return [];
   });
@@ -312,7 +315,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [registeredAccounts, setRegisteredAccounts] = useState<UserAccountRecord[]>(() => {
     const saved = localStorage.getItem(AUTH_KEYS.REGISTERED_ACCOUNTS);
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+      try { 
+        const parsed = JSON.parse(saved); 
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) { /* ignore */ }
     }
     return [];
   });
@@ -496,9 +502,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       lastLoginAt: newAccount.lastLoginAt,
     };
 
-    setRegisteredAccounts((prev) => [newAccount, ...prev.filter((a) => a.id !== userId)]);
-    setKnownUsers((prev) => [authUser, ...prev.filter((u) => u.id !== userId)]);
+    setRegisteredAccounts((prev) => {
+      const updated = [newAccount, ...prev.filter((a) => a.id !== userId)];
+      localStorage.setItem(AUTH_KEYS.REGISTERED_ACCOUNTS, JSON.stringify(updated));
+      return updated;
+    });
+    setKnownUsers((prev) => {
+      const updated = [authUser, ...prev.filter((u) => u.id !== userId)];
+      localStorage.setItem(AUTH_KEYS.KNOWN_USERS, JSON.stringify(updated));
+      return updated;
+    });
     setCurrentUser(authUser);
+    localStorage.setItem(AUTH_KEYS.SESSION, JSON.stringify(authUser));
+    localStorage.setItem(AUTH_KEYS.ACTIVE_USER_ID, authUser.id);
 
     return { success: true };
   };
@@ -547,9 +563,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setErrors(data.errors);
     setChapters(data.chapters);
 
-    setRegisteredAccounts((prev) => [updatedAccount, ...prev.filter((a) => a.id !== account.id)]);
-    setKnownUsers((prev) => [authUser, ...prev.filter((u) => u.id !== account.id)]);
+    setRegisteredAccounts((prev) => {
+      const updated = [updatedAccount, ...prev.filter((a) => a.id !== account.id)];
+      localStorage.setItem(AUTH_KEYS.REGISTERED_ACCOUNTS, JSON.stringify(updated));
+      return updated;
+    });
+    setKnownUsers((prev) => {
+      const updated = [authUser, ...prev.filter((u) => u.id !== account.id)];
+      localStorage.setItem(AUTH_KEYS.KNOWN_USERS, JSON.stringify(updated));
+      return updated;
+    });
     setCurrentUser(authUser);
+    localStorage.setItem(AUTH_KEYS.SESSION, JSON.stringify(authUser));
+    localStorage.setItem(AUTH_KEYS.ACTIVE_USER_ID, authUser.id);
 
     return { success: true };
   };
