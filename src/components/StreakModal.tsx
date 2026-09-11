@@ -1,6 +1,6 @@
-import React from 'react';
-import { useApp } from '../context/AppContext';
-import { Flame, Award, ShieldCheck, X, CheckCircle2, Target, Zap, AlertTriangle } from 'lucide-react';
+import React, { useState } from 'react';
+import { useApp, getLogicalDate } from '../context/AppContext';
+import { Flame, Check, Share2, X, Trophy } from 'lucide-react';
 
 interface StreakModalProps {
   isOpen: boolean;
@@ -8,148 +8,149 @@ interface StreakModalProps {
 }
 
 export const StreakModal: React.FC<StreakModalProps> = ({ isOpen, onClose }) => {
-  const { profile, todaysCheckIn, openCheckInModal } = useApp();
+  const { profile, checkIns } = useApp();
+  const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
 
-  const milestones = [
-    { days: 3, label: 'Bronze Ranker', desc: 'Initial momentum locked in', unlocked: profile.currentStreak >= 3 },
-    { days: 7, label: 'Silver Ranker', desc: '1 Full week of relentless discipline', unlocked: profile.currentStreak >= 7 },
-    { days: 21, label: 'Gold Ranker', desc: 'Habit deeply formed in subconscious', unlocked: profile.currentStreak >= 21 },
-    { days: 60, label: 'Diamond IITian', desc: 'Elite top 0.1% mental conditioning', unlocked: profile.currentStreak >= 60 },
-  ];
+  // Calculate current week dates (Mon-Sun)
+  const getWeekDates = () => {
+    const logicalTodayStr = getLogicalDate();
+    const logicalToday = new Date(logicalTodayStr);
+    
+    // getDay() is 0 for Sun, 1 for Mon, etc.
+    const diffToMon = logicalToday.getDay() === 0 ? -6 : 1 - logicalToday.getDay();
+    
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(logicalToday);
+      d.setDate(logicalToday.getDate() + diffToMon + i);
+      dates.push(d.toISOString().split('T')[0]);
+    }
+    return dates;
+  };
+
+  const weekDates = getWeekDates();
+  const todayStr = getLogicalDate();
+
+  const handleShare = () => {
+    const text = `🔥 I'm on a ${profile.currentStreak}-day study streak on Rankify! Building consistency for IIT JEE.`;
+    if (navigator.share) {
+      navigator.share({
+        title: 'My Rankify Streak',
+        text: text,
+      }).catch(() => {
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    } else {
+      navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const xpBonus = profile.currentStreak > 0 ? profile.currentStreak * 5 : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in overscroll-contain">
-      <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto overscroll-contain rounded-3xl bg-[#121A27] border border-slate-700/80 p-6 shadow-2xl space-y-5 animate-pop-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in overscroll-contain">
+      <div className="relative w-full max-w-sm rounded-[2rem] bg-[#121A27] border border-slate-700/60 p-8 shadow-2xl shadow-orange-500/10 flex flex-col items-center animate-pop-in">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
+          className="absolute top-5 right-5 p-2 rounded-full bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-700 transition cursor-pointer z-10"
         >
-          <X className="w-4 h-4" />
+          <X className="w-5 h-5" />
         </button>
 
-        {/* Streak Header */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-500/20 to-orange-500/30 border border-amber-500/40 text-amber-400 shadow-xl shadow-amber-500/20">
-            <Flame className="w-9 h-9 fill-amber-500 animate-pulse" />
-          </div>
-          <h2 className="text-xl font-bold text-white">Daily Study Streak</h2>
-          <p className="text-xs text-slate-400">Consistency beats genius. Don't break the chain.</p>
+        {/* Milestone Header */}
+        <div className="text-center mb-6 mt-2">
+          <h2 className="text-2xl font-bold text-white tracking-wide">Streak Milestone!</h2>
+          <p className="text-sm text-slate-400 mt-1">Consistency is the ultimate weapon.</p>
         </div>
 
-        {/* Today's Check-In Status Pill */}
-        {todaysCheckIn ? (
-          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-300">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Today's Check-In: <strong className="text-white">{todaysCheckIn.mood}</strong></span>
+        {/* Big Flame & Counter */}
+        <div className="relative flex flex-col items-center justify-center mb-8">
+          <div className="absolute inset-0 bg-orange-500/20 blur-3xl rounded-full w-48 h-48 -z-10"></div>
+          
+          <div className="relative">
+            <Flame className="w-32 h-32 text-orange-500 fill-orange-500 animate-pulse drop-shadow-[0_0_15px_rgba(249,115,22,0.6)]" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center mt-6">
+              <span className="text-4xl font-black text-white drop-shadow-md">{profile.currentStreak}</span>
             </div>
-            <button
-              onClick={() => {
-                onClose();
-                openCheckInModal();
-              }}
-              className="text-[11px] underline text-cyan-400 hover:text-cyan-300 cursor-pointer font-semibold"
-            >
-              View Log
-            </button>
           </div>
-        ) : (
-          <button
-            onClick={() => {
-              onClose();
-              openCheckInModal();
-            }}
-            className="w-full py-2.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/30 to-amber-500/20 border border-amber-500/50 hover:border-amber-400 text-amber-300 hover:text-white text-xs font-bold transition flex items-center justify-between cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <Flame className="w-4 h-4 fill-amber-400" />
-              <span>Today's Check-In Pending</span>
-            </div>
-            <span className="text-[11px] px-2 py-0.5 rounded bg-amber-500/30 text-amber-200">
-              Claim Day {profile.currentStreak + 1} →
-            </span>
-          </button>
+          <span className="text-lg font-bold text-orange-400 mt-2 tracking-widest uppercase">Day Streak</span>
+        </div>
+
+        {/* Weekly Consistency Tracker */}
+        <div className="w-full mb-8">
+          <div className="flex justify-between items-center w-full px-1">
+            {weekDates.map((dateStr) => {
+              const dateObj = new Date(dateStr);
+              const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' }).charAt(0);
+              const isCheckedIn = checkIns.some(c => c.date === dateStr);
+              const isToday = dateStr === todayStr;
+              const isPast = dateStr < todayStr;
+              
+              let circleClasses = "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300";
+              let textClasses = "text-xs font-semibold mt-2";
+              
+              if (isCheckedIn) {
+                circleClasses += " bg-orange-500 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.4)]";
+                textClasses += " text-orange-400";
+              } else if (isToday) {
+                circleClasses += " bg-slate-800 border-orange-500/50 border-dashed animate-pulse";
+                textClasses += " text-slate-300";
+              } else if (isPast) {
+                circleClasses += " bg-slate-800 border-slate-700/50";
+                textClasses += " text-slate-600";
+              } else {
+                circleClasses += " bg-transparent border-slate-700/50";
+                textClasses += " text-slate-500";
+              }
+
+              return (
+                <div key={dateStr} className="flex flex-col items-center">
+                  <div className={circleClasses}>
+                    {isCheckedIn ? (
+                      <Check className="w-5 h-5 text-white" strokeWidth={3} />
+                    ) : isToday && !isCheckedIn ? (
+                      <div className="w-2 h-2 rounded-full bg-orange-500/50"></div>
+                    ) : null}
+                  </div>
+                  <span className={textClasses}>{dayName}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* XP Bonus Notice */}
+        {profile.currentStreak > 0 && (
+          <div className="w-full p-3 rounded-2xl bg-gradient-to-r from-yellow-500/10 via-orange-500/10 to-yellow-500/10 border border-yellow-500/30 flex items-center justify-center gap-2 mb-8">
+            <Trophy className="w-5 h-5 text-yellow-400" />
+            <span className="text-sm font-bold text-yellow-400">+{xpBonus} EXP for your consistency!</span>
+          </div>
         )}
 
-        {/* Big Numbers Grid: Streak and EXP side by side */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          <div className="p-3 rounded-2xl bg-slate-900/90 border border-amber-500/30 text-center">
-            <span className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider block">Current Streak</span>
-            <div className="mt-1 text-2xl sm:text-3xl font-extrabold font-mono text-amber-400">
-              {profile.currentStreak} <span className="text-xs font-normal text-slate-400">d</span>
-            </div>
-          </div>
-          <div className="p-3 rounded-2xl bg-slate-900/90 border border-yellow-500/30 text-center">
-            <span className="text-[10px] sm:text-xs font-semibold text-yellow-400/90 uppercase tracking-wider block">Rank EXP</span>
-            <div className="mt-1 text-2xl sm:text-3xl font-extrabold font-mono text-yellow-400">
-              {profile.exp || 0} <span className="text-xs font-normal text-slate-400">EXP</span>
-            </div>
-          </div>
-          <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 text-center">
-            <span className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider block">Best Record</span>
-            <div className="mt-1 text-2xl sm:text-3xl font-extrabold font-mono text-emerald-400">
-              {profile.bestStreak} <span className="text-xs font-normal text-slate-400">d</span>
-            </div>
-          </div>
+        {/* Action Buttons */}
+        <div className="w-full space-y-3">
+          <button
+            onClick={handleShare}
+            className="w-full py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-bold text-sm transition flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Share2 className="w-4 h-4" />
+            {copied ? 'Copied to Clipboard!' : 'Share Milestone'}
+          </button>
+          <button
+            onClick={onClose}
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-black text-sm uppercase tracking-wider shadow-lg shadow-orange-500/25 transition cursor-pointer"
+          >
+            Continue
+          </button>
         </div>
-
-        {/* EXP Reward & Midnight Penalty Rule */}
-        <div className="p-3.5 rounded-2xl bg-gradient-to-br from-slate-900 via-[#101726] to-slate-900 border border-slate-800 text-xs space-y-2 text-slate-300">
-          <div className="flex items-center gap-1.5 font-bold text-yellow-400">
-            <Zap className="w-4 h-4 fill-yellow-400" />
-            <span>EXP Rewards & Strict Midnight Penalty:</span>
-          </div>
-          <ul className="space-y-1 text-[11px] text-slate-400 list-disc list-inside">
-            <li><strong className="text-emerald-300">+5 EXP</strong> earned instantly for each completed task in your To-Do list.</li>
-            <li><strong className="text-rose-400">Midnight Penalty:</strong> If ALL To-Do tasks are not completed by 11:59 PM, your Streak resets to 0 and EXP resets back to 0 as penalty!</li>
-            <li>Submit your Daily Check-In every day to protect and advance your Streak.</li>
-          </ul>
-        </div>
-
-        {/* Milestones */}
-        <div className="space-y-2">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-            <Target className="w-3.5 h-3.5 text-amber-400" />
-            Streak Badges
-          </span>
-          <div className="space-y-2">
-            {milestones.map((m) => (
-              <div
-                key={m.days}
-                className={`flex items-center justify-between p-3 rounded-xl border text-xs transition ${
-                  m.unlocked
-                    ? 'bg-amber-500/10 border-amber-500/40 text-amber-200'
-                    : 'bg-slate-900/50 border-slate-800/80 text-slate-500'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Award className={`w-4 h-4 ${m.unlocked ? 'text-amber-400' : 'text-slate-600'}`} />
-                  <div>
-                    <div className="font-bold">{m.label} ({m.days}d)</div>
-                    <div className="text-[10px] text-slate-400">{m.desc}</div>
-                  </div>
-                </div>
-                {m.unlocked ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                ) : (
-                  <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-slate-800 text-slate-400">
-                    {m.days - profile.currentStreak > 0 ? `${m.days - profile.currentStreak}d to go` : 'Locked'}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <button
-          onClick={onClose}
-          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold text-sm hover:opacity-90 transition shadow-lg shadow-cyan-500/20 cursor-pointer"
-        >
-          Got It, Back to Studies
-        </button>
       </div>
     </div>
   );
 };
+
