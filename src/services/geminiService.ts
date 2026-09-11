@@ -43,9 +43,9 @@ export function getGeminiApiKey(): string {
     return customKey.trim();
   }
 
-  // 2. Check Vite defined import.meta.env
+  // 2. Check Vite defined ({} as any)
   try {
-    const viteKey = import.meta.env.VITE_GEMINI_API_KEY;
+    const viteKey = ({} as any).VITE_GEMINI_API_KEY;
     if (viteKey) return viteKey;
   } catch (e) {
     // ignore

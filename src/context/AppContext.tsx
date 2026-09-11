@@ -178,17 +178,6 @@ const loadUserScopedData = (
     localStorage.setItem(todosKey, JSON.stringify(loadedTodos));
   }
 
-  // Check-ins
-  if (savedCheckins) {
-    try {
-      loadedCheckins = JSON.parse(savedCheckins);
-    } catch {
-      loadedCheckins = [];
-    }
-  } else {
-    loadedCheckins = [];
-  }
-
   // Sessions
   const sessionsKey = getScopedKey(userId, 'sessions');
   const savedSessions = localStorage.getItem(sessionsKey);
@@ -1190,6 +1179,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleTodo,
         deleteTodo,
         deleteMultipleTodos,
+        reorderTodos,
         completeMultipleTodos,
         editTodo,
         clearCompletedTodos,

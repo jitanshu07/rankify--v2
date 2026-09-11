@@ -555,7 +555,7 @@ export const TimerScreen: React.FC = () => {
                 cursor={{ fill: '#1e293b' }}
                 contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '12px', color: '#f8fafc' }}
                 itemStyle={{ color: '#06b6d4', fontWeight: 'bold' }}
-                formatter={(value: number) => [`${value} hrs`, 'Study Time']}
+                formatter={(value: any) => [`${value} hrs`, 'Study Time']}
                 labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
               />
               <Bar dataKey="hours" radius={[6, 6, 0, 0]} maxBarSize={40}>

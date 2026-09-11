@@ -30,6 +30,7 @@ export const TodoScreen: React.FC = () => {
     todos, 
     addTodo, 
     toggleTodo, 
+    reorderTodos,
     deleteTodo,
     deleteMultipleTodos,
     completeMultipleTodos,
