@@ -1,4 +1,6 @@
-import { defineConfig, loadEnv } from 'vite';
+const fs = require('fs');
+
+let code = `import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
@@ -19,4 +21,6 @@ export default defineConfig(({ mode }) => {
       sourcemap: false,
     },
   };
-});
+});`;
+
+fs.writeFileSync('vite.config.ts', code);

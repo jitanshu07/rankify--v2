@@ -43,19 +43,18 @@ export function getGeminiApiKey(): string {
     return customKey.trim();
   }
 
-  // 2. Check Vite defined process.env.GEMINI_API_KEY
+  // 2. Check Vite defined import.meta.env
   try {
-    if (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY) {
-      return process.env.GEMINI_API_KEY;
-    }
+    const viteKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (viteKey) return viteKey;
   } catch (e) {
     // ignore
   }
 
-  // 3. Check import.meta.env
+  // Fallback for non-Vite environments if needed
   try {
-    if (import.meta && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) {
-      return import.meta.env.VITE_GEMINI_API_KEY as string;
+    if (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY) {
+      return process.env.GEMINI_API_KEY;
     }
   } catch (e) {
     // ignore
